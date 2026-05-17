@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `widget_configs_ctx_type_uniq` ON `widget_configs` (`context_id`,`widget_type`);

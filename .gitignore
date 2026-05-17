@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+
+# Environment — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Database — SQLite lives in data/ on the host; back this up, don't commit it
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V*
+.Trashes
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dev assets not part of the repo
+.concepts/
+
+# Misc
+*.pem
+.vercel
+.turbo

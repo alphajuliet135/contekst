@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+
+    --background: 0 0% 9%;          /* #171717 */
+    --foreground: 0 0% 93%;         /* #EDEDED */
+    --muted: 0 0% 15%;              /* #262626 */
+    --muted-foreground: 0 0% 56%;   /* #8F8F8F */
+    --border: 0 0% 20%;             /* #333333 */
+    --card: 0 0% 12%;               /* #1F1F1F */
+    --card-foreground: 0 0% 93%;    /* #EDEDED */
+    --radius: 0.5rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
+
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Nav items — hover handled at CSS level so inline active styles can override */
+.nav-item {
+  transition: background 100ms ease, color 100ms ease;
+}
+.nav-item:hover {
+  background: hsl(var(--muted));
+}
+
+/* Card depth — visible on dark backgrounds */
+.card-shadow {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 0.5px rgba(255, 255, 255, 0.04);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
