@@ -31,6 +31,7 @@ export interface Todo {
   dueDate?: string | null
   done: boolean
   pinned: boolean
+  completedAt?: string | null
   createdAt: string | null
 }
 

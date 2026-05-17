@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { cookies } from 'next/headers'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -18,9 +19,14 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies()
+  const theme = cookieStore.get('theme')?.value ?? 'system'
+  // For 'system' we write no attribute — the CSS media query handles OS preference
+  const dataTheme = theme === 'system' ? undefined : (theme as 'light' | 'dark')
+
   return (
-    <html lang="en" style={{ colorScheme: 'dark' }}>
+    <html lang="en" data-theme={dataTheme}>
       <body>{children}</body>
     </html>
   )

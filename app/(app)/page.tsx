@@ -1,10 +1,11 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/server/db'
-import { contexts, todos, dates } from '@/server/db/schema'
+import { contexts, todos, dates, users } from '@/server/db/schema'
 import { eq, and, lte, gte } from 'drizzle-orm'
 import { Calendar, ArrowRight } from 'lucide-react'
 import { formatDate, colorTint } from '@/lib/utils'
+import { TodoCheckbox } from '@/components/ui/TodoCheckbox'
 
 // ── Shared badge styles ──────────────────────────────────────────────────────
 
@@ -33,7 +34,13 @@ export default async function MissionControlPage() {
   const session = await auth()
   if (!session) redirect('/login')
   const userId = session.user.id
-  const userName = session.user.name
+
+  // Read name directly from DB so it reflects updates without requiring re-auth
+  const dbUser = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { name: true },
+  })
+  const userName = dbUser?.name
 
   const userContexts = await db.query.contexts.findMany({
     where: eq(contexts.userId, userId),
@@ -149,12 +156,9 @@ export default async function MissionControlPage() {
                         <>
                           {urgent.map(todo => (
                             <div key={todo.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 14px' }}>
-                              {/* Circular checkbox */}
-                              <span style={{
-                                width: 15, height: 15, borderRadius: '50%',
-                                border: '1.5px solid hsl(var(--border))',
-                                flexShrink: 0, marginTop: 2,
-                              }} />
+                              <div style={{ marginTop: 2 }}>
+                                <TodoCheckbox todoId={todo.id} color={ctx.color} size={15} />
+                              </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <span style={{ fontSize: 13, lineHeight: 1.4, display: 'block' }}>
                                   {todo.title}
@@ -340,7 +344,7 @@ export default async function MissionControlPage() {
                   </div>
                   {topItems.length > 0 ? topItems.map(todo => (
                     <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 14, marginBottom: 3 }}>
-                      <ArrowRight size={10} strokeWidth={2} style={{ color: 'hsl(var(--muted-foreground))', flexShrink: 0 }} />
+                      <TodoCheckbox todoId={todo.id} color={ctx.color} size={13} />
                       <span style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {todo.title}
                       </span>

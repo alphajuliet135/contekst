@@ -53,6 +53,7 @@ export const todos = sqliteTable('todos', {
   dueDate: text('due_date'),
   done: integer('done', { mode: 'boolean' }).notNull().default(false),
   pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+  completedAt: text('completed_at'),
   createdAt: text('created_at').default(sql`(current_timestamp)`),
 })
 

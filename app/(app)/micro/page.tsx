@@ -3,12 +3,9 @@ import { redirect } from 'next/navigation'
 import { db } from '@/server/db'
 import { contexts, todos, dates } from '@/server/db/schema'
 import { eq, and, gte, lte, inArray } from 'drizzle-orm'
-import { Calendar } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
-import { PromoteButton } from '@/components/micro/PromoteButton'
+import { MicroCard } from '@/components/micro/MicroCard'
 
 const priorityOrder = { high: 0, medium: 1, low: 2 } as const
-const priorityColor = { high: '#d95f5f', medium: '#d4883a', low: '#a0a8b0' } as const
 
 export default async function MicroPage() {
   const session = await auth()
@@ -99,185 +96,21 @@ export default async function MicroPage() {
             const ctxTodos = (todosByCtx.get(ctx.id) ?? [])
               .slice()
               .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
-            const ctxDates = datesByCtx.get(ctx.id) ?? []
-
-            const topTodo = ctxTodos[0] ?? null
-            const topDate = ctxDates[0] ?? null
-
-            // Primary: highest-priority todo, or next date if no todos
-            // Secondary: next date if primary is a todo, else nothing
-            const primary = topTodo
-              ? { kind: 'todo' as const, item: topTodo }
-              : topDate
-                ? { kind: 'date' as const, item: topDate }
-                : null
-
-            const secondary = topTodo && topDate
-              ? { kind: 'date' as const, item: topDate }
-              : null
-
-            const remainingTodos = ctxTodos.length - (topTodo ? 1 : 0)
+            const ctxDates = (datesByCtx.get(ctx.id) ?? [])
+              .map(d => ({ id: d.id, title: d.title, date: d.date }))
 
             return (
-              <div
+              <MicroCard
                 key={ctx.id}
-                className="card-shadow"
-                style={{
-                  background: 'hsl(var(--card))',
-                  border: '0.5px solid hsl(var(--border))',
-                  borderRadius: 12,
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Header */}
-                <div style={{
-                  padding: '11px 14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  borderBottom: '0.5px solid hsl(var(--border))',
-                }}>
-                  <span style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: ctx.color,
-                    flexShrink: 0,
-                  }} />
-                  <span style={{ fontSize: 13, fontWeight: 500, flex: 1, minWidth: 0 }}>
-                    {ctx.name}
-                  </span>
-                  <PromoteButton contextId={ctx.id} />
-                </div>
-
-                {/* Body */}
-                <div style={{
-                  padding: '10px 14px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 7,
-                }}>
-                  {primary === null ? (
-                    <span style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))' }}>
-                      All clear
-                    </span>
-                  ) : (
-                    <>
-                      {primary.kind === 'todo' && (
-                        <TodoRow
-                          title={primary.item.title}
-                          priority={primary.item.priority}
-                          dueDate={primary.item.dueDate ?? null}
-                          today={today}
-                        />
-                      )}
-                      {primary.kind === 'date' && (
-                        <DateRow
-                          title={primary.item.title}
-                          date={primary.item.date}
-                          color={ctx.color}
-                        />
-                      )}
-
-                      {secondary?.kind === 'date' && (
-                        <DateRow
-                          title={secondary.item.title}
-                          date={secondary.item.date}
-                          color={ctx.color}
-                        />
-                      )}
-
-                      {remainingTodos > 0 && (
-                        <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>
-                          +{remainingTodos} more todo{remainingTodos === 1 ? '' : 's'}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+                ctx={ctx}
+                initialTodos={ctxTodos}
+                initialDates={ctxDates}
+                today={today}
+              />
             )
           })}
         </div>
       )}
-    </div>
-  )
-}
-
-function TodoRow({
-  title,
-  priority,
-  dueDate,
-  today,
-}: {
-  title: string
-  priority: keyof typeof priorityColor
-  dueDate: string | null
-  today: string
-}) {
-  const isOverdue = dueDate != null && dueDate <= today
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-      <span style={{
-        marginTop: 5,
-        width: 6,
-        height: 6,
-        borderRadius: '50%',
-        flexShrink: 0,
-        background: priorityColor[priority],
-      }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{
-          fontSize: 13,
-          lineHeight: 1.4,
-          display: 'block',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}>
-          {title}
-        </span>
-        {dueDate && (
-          <span style={{
-            fontSize: 11,
-            color: isOverdue ? '#d95f5f' : 'hsl(var(--muted-foreground))',
-            display: 'block',
-            marginTop: 1,
-          }}>
-            {isOverdue ? 'Overdue · ' : ''}{formatDate(dueDate)}
-          </span>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function DateRow({
-  title,
-  date,
-  color,
-}: {
-  title: string
-  date: string
-  color: string
-}) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <Calendar
-        size={11}
-        strokeWidth={1.5}
-        style={{ color, flexShrink: 0 }}
-      />
-      <span style={{
-        fontSize: 13,
-        color: 'hsl(var(--muted-foreground))',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      }}>
-        {title}
-        <span style={{ marginLeft: 5 }}>· {formatDate(date)}</span>
-      </span>
     </div>
   )
 }

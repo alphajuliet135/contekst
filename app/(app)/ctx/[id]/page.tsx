@@ -5,7 +5,7 @@ import { db } from '@/server/db'
 import {
   contexts, todos, dates, notes, habits, habitLogs, links, people, widgetConfigs,
 } from '@/server/db/schema'
-import { eq, and, inArray } from 'drizzle-orm'
+import { eq, and, inArray, or, gte } from 'drizzle-orm'
 import type { WidgetType } from '@/lib/types'
 import { colorTint } from '@/lib/utils'
 import { TodosWidget } from '@/components/widgets/TodosWidget'
@@ -34,6 +34,8 @@ export default async function ContextPage({ params }: Props) {
   if (!context) notFound()
 
   const today = new Date().toISOString().split('T')[0]
+  // Only show done tasks completed within the last 7 days
+  const cutoff = new Date(Date.now() - 7 * 86400000).toISOString()
 
   const [
     ctxTodos,
@@ -45,7 +47,14 @@ export default async function ContextPage({ params }: Props) {
     configs,
   ] = await Promise.all([
     db.query.todos.findMany({
-      where: and(eq(todos.contextId, id), eq(todos.userId, userId)),
+      where: and(
+        eq(todos.contextId, id),
+        eq(todos.userId, userId),
+        or(
+          eq(todos.done, false),
+          and(eq(todos.done, true), gte(todos.completedAt, cutoff)),
+        ),
+      ),
     }),
     db.query.dates.findMany({
       where: and(eq(dates.contextId, id), eq(dates.userId, userId)),
@@ -192,7 +201,7 @@ export default async function ContextPage({ params }: Props) {
           gap: 12,
         }}>
           {isEnabled('todos') && (
-            <TodosWidget todos={ctxTodos} color={context.color} />
+            <TodosWidget todos={ctxTodos} color={context.color} contextId={id} />
           )}
           {isEnabled('dates') && (
             <DatesWidget dates={ctxDates} color={context.color} />

@@ -3,17 +3,68 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── Default / system fallback: dark ───────────────────────────── */
   :root {
     color-scheme: dark;
-
-    --background: 0 0% 9%;          /* #171717 */
-    --foreground: 0 0% 93%;         /* #EDEDED */
-    --muted: 0 0% 15%;              /* #262626 */
-    --muted-foreground: 0 0% 56%;   /* #8F8F8F */
-    --border: 0 0% 20%;             /* #333333 */
-    --card: 0 0% 12%;               /* #1F1F1F */
-    --card-foreground: 0 0% 93%;    /* #EDEDED */
+    --background: 0 0% 9%;
+    --foreground: 0 0% 93%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 56%;
+    --border: 0 0% 20%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 93%;
     --radius: 0.5rem;
+  }
+
+  /* ── Explicit light ─────────────────────────────────────────────── */
+  [data-theme="light"] {
+    color-scheme: light;
+    --background: 40 23% 97%;
+    --foreground: 30 8% 12%;
+    --muted: 40 12% 93%;
+    --muted-foreground: 35 6% 48%;
+    --border: 36 10% 87%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 8% 12%;
+  }
+
+  /* ── Explicit dark (mirrors :root so JS toggling works cleanly) ─── */
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --background: 0 0% 9%;
+    --foreground: 0 0% 93%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 56%;
+    --border: 0 0% 20%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 93%;
+  }
+
+  /* ── System: follow OS when no explicit theme is set ───────────── */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      color-scheme: light;
+      --background: 40 23% 97%;
+      --foreground: 30 8% 12%;
+      --muted: 40 12% 93%;
+      --muted-foreground: 35 6% 48%;
+      --border: 36 10% 87%;
+      --card: 0 0% 100%;
+      --card-foreground: 30 8% 12%;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      color-scheme: dark;
+      --background: 0 0% 9%;
+      --foreground: 0 0% 93%;
+      --muted: 0 0% 15%;
+      --muted-foreground: 0 0% 56%;
+      --border: 0 0% 20%;
+      --card: 0 0% 12%;
+      --card-foreground: 0 0% 93%;
+    }
   }
 
   * {
@@ -32,7 +83,7 @@
   }
 }
 
-/* Nav items — hover handled at CSS level so inline active styles can override */
+/* ── Nav items — hover via CSS so inline active styles can override ── */
 .nav-item {
   transition: background 100ms ease, color 100ms ease;
 }
@@ -40,12 +91,22 @@
   background: hsl(var(--muted));
 }
 
-/* Card depth — visible on dark backgrounds */
+/* ── Card depth — tuned per theme ─────────────────────────────────── */
 .card-shadow {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 0.5px rgba(255, 255, 255, 0.04);
 }
 
-/* Scrollbar */
+[data-theme="light"] .card-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .card-shadow {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

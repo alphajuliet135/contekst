@@ -1,6 +1,12 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckSquare, Plus, Check } from 'lucide-react'
-import type { Todo } from '@/lib/types'
+import type { Todo, Priority } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
+
+// ── Badge styles (reused for priority selector in add form) ───────────────────
 
 const BADGE_BASE: React.CSSProperties = {
   borderRadius: 5, padding: '1px 7px', fontSize: 11, fontWeight: 500,
@@ -13,17 +19,100 @@ const BADGE = {
   done:   { background: 'rgba(55,138,221,0.15)',   color: '#378ADD', border: '1px solid rgba(55,138,221,0.2)' },
 } as const
 
-const priorityOrder = { high: 0, medium: 1, low: 2 }
+const priorityOrder: Record<Priority, number> = { high: 0, medium: 1, low: 2 }
 
-export function TodosWidget({ todos, color }: { todos: Todo[]; color: string }) {
-  const sorted = [...todos].sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-    return priorityOrder[a.priority] - priorityOrder[b.priority]
-  })
+// ── Component ─────────────────────────────────────────────────────────────────
 
-  const activeCount = sorted.filter(t => !t.done).length
+interface Props {
+  todos: Todo[]
+  color: string
+  contextId: string
+}
+
+export function TodosWidget({ todos, color, contextId }: Props) {
+  const router = useRouter()
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const [items, setItems]             = useState<Todo[]>(todos)
+  const [showForm, setShowForm]       = useState(false)
+  const [newTitle, setNewTitle]       = useState('')
+  const [newPriority, setNewPriority] = useState<Priority>('medium')
+  const [submitting, setSubmitting]   = useState(false)
+
+  // Sync with server after router.refresh()
+  useEffect(() => { setItems(todos) }, [todos])
+
+  // Auto-focus the input when the form opens
+  useEffect(() => {
+    if (showForm) inputRef.current?.focus()
+  }, [showForm])
+
+  // ── Toggle done ─────────────────────────────────────────────────────────────
+
+  async function toggleDone(todo: Todo) {
+    const nowDone = !todo.done
+    const completedAt = nowDone ? new Date().toISOString() : null
+    setItems(prev => prev.map(t =>
+      t.id === todo.id ? { ...t, done: nowDone, completedAt } : t
+    ))
+    await fetch(`/api/todos/${todo.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ done: nowDone, completedAt }),
+    })
+    router.refresh()
+  }
+
+  // ── Add task ────────────────────────────────────────────────────────────────
+
+  async function handleAdd() {
+    const title = newTitle.trim()
+    if (!title || submitting) return
+    setSubmitting(true)
+
+    const tempId = `temp-${Date.now()}`
+    setItems(prev => [...prev, {
+      id: tempId, contextId, userId: '',
+      title, priority: newPriority,
+      done: false, pinned: false,
+      completedAt: null, createdAt: null,
+    }])
+    setShowForm(false)
+    setNewTitle('')
+    setNewPriority('medium')
+    setSubmitting(false)
+
+    await fetch('/api/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contextId, title, priority: newPriority }),
+    })
+    router.refresh()
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') handleAdd()
+    if (e.key === 'Escape') { setShowForm(false); setNewTitle(''); setNewPriority('medium') }
+  }
+
+  // ── Sorted lists ────────────────────────────────────────────────────────────
+
+  const activeItems = items
+    .filter(t => !t.done)
+    .sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+      return priorityOrder[a.priority] - priorityOrder[b.priority]
+    })
+
+  const doneItems = items
+    .filter(t => t.done)
+    .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
+
+  const activeCount = activeItems.length
+  const hasItems = items.length > 0
   const today = new Date().toISOString().split('T')[0]
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="card-shadow" style={{
@@ -43,52 +132,49 @@ export function TodosWidget({ todos, color }: { todos: Todo[]; color: string }) 
         {activeCount > 0 && (
           <span style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))' }}>{activeCount}</span>
         )}
-        <button style={{
-          marginLeft: 'auto', background: 'none', border: 'none',
-          color: 'hsl(var(--muted-foreground))', fontSize: 12, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 3, padding: '2px 4px',
-        }}>
+        <button
+          onClick={() => setShowForm(v => !v)}
+          style={{
+            marginLeft: 'auto', background: 'none', border: 'none',
+            color: showForm ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+            fontSize: 12, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 3, padding: '2px 4px',
+          }}
+        >
           <Plus size={11} strokeWidth={2} />
           Add
         </button>
       </div>
 
       {/* Body */}
-      {todos.length === 0 ? (
+      {!hasItems && !showForm ? (
         <div style={{ padding: '14px 16px' }}>
-          <span style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))' }}>No priorities yet</span>
+          <span style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))' }}>
+            No priorities yet — click Add to create one
+          </span>
         </div>
       ) : (
-        <div style={{ padding: '6px 0' }}>
-          {sorted.map(todo => (
+        <div style={{ paddingBottom: showForm ? 0 : 6 }}>
+          {/* Active tasks */}
+          {activeItems.map(todo => (
             <div key={todo.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '7px 16px' }}>
               {/* Checkbox */}
-              {todo.done ? (
-                <span style={{
-                  width: 16, height: 16, borderRadius: '50%',
-                  background: color, flexShrink: 0, marginTop: 1,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Check size={9} strokeWidth={3} style={{ color: 'white' }} />
-                </span>
-              ) : (
-                <span style={{
+              <span
+                onClick={() => toggleDone(todo)}
+                style={{
                   width: 16, height: 16, borderRadius: '50%',
                   border: '1.5px solid hsl(var(--border))',
                   flexShrink: 0, marginTop: 1,
-                }} />
-              )}
-
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              />
               {/* Title + due date */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{
-                  fontSize: 13, lineHeight: 1.4, display: 'block',
-                  textDecoration: todo.done ? 'line-through' : 'none',
-                  color: todo.done ? 'hsl(var(--muted-foreground))' : 'hsl(var(--foreground))',
-                }}>
+                <span style={{ fontSize: 13, lineHeight: 1.4, display: 'block' }}>
                   {todo.title}
                 </span>
-                {!todo.done && todo.dueDate && (
+                {todo.dueDate && (
                   <span style={{
                     fontSize: 11,
                     color: todo.dueDate <= today ? '#d95f5f' : 'hsl(var(--muted-foreground))',
@@ -98,13 +184,122 @@ export function TodosWidget({ todos, color }: { todos: Todo[]; color: string }) 
                   </span>
                 )}
               </div>
-
               {/* Badge */}
-              <span style={{ ...BADGE_BASE, ...(todo.done ? BADGE.done : BADGE[todo.priority]) }}>
-                {todo.done ? 'Done' : todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Med' : 'Low'}
+              <span style={{ ...BADGE_BASE, ...BADGE[todo.priority] }}>
+                {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Med' : 'Low'}
               </span>
             </div>
           ))}
+
+          {/* Done tasks */}
+          {doneItems.length > 0 && (
+            <>
+              {activeItems.length > 0 && (
+                <div style={{ borderTop: '0.5px solid hsl(var(--border))', margin: '4px 0' }} />
+              )}
+              {doneItems.map(todo => (
+                <div key={todo.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 16px' }}>
+                  {/* Filled checkbox */}
+                  <span
+                    onClick={() => toggleDone(todo)}
+                    style={{
+                      width: 16, height: 16, borderRadius: '50%',
+                      background: color, flexShrink: 0, marginTop: 1,
+                      cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <Check size={9} strokeWidth={3} style={{ color: 'white' }} />
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{
+                      fontSize: 13, lineHeight: 1.4, display: 'block',
+                      textDecoration: 'line-through',
+                      color: 'hsl(var(--muted-foreground))',
+                    }}>
+                      {todo.title}
+                    </span>
+                  </div>
+                  <span style={{ ...BADGE_BASE, ...BADGE.done }}>Done</span>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Inline add form */}
+          {showForm && (
+            <div style={{
+              padding: '10px 16px 12px',
+              borderTop: hasItems ? '0.5px solid hsl(var(--border))' : 'none',
+            }}>
+              <input
+                ref={inputRef}
+                type="text"
+                value={newTitle}
+                onChange={e => setNewTitle(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Add a task…"
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'none', border: 'none', outline: 'none',
+                  fontSize: 13, color: 'hsl(var(--foreground))',
+                  padding: '0 0 8px',
+                }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                {/* Priority selector */}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {(['high', 'medium', 'low'] as Priority[]).map(p => {
+                    const selected = newPriority === p
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setNewPriority(p)}
+                        style={{
+                          ...BADGE_BASE,
+                          ...(selected ? BADGE[p] : {
+                            background: 'transparent',
+                            color: 'hsl(var(--muted-foreground))',
+                            border: '0.5px solid hsl(var(--border))',
+                          }),
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {p === 'high' ? 'High' : p === 'medium' ? 'Med' : 'Low'}
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowForm(false); setNewTitle(''); setNewPriority('medium') }}
+                    style={{
+                      background: 'none', border: 'none', fontSize: 12,
+                      color: 'hsl(var(--muted-foreground))', cursor: 'pointer', padding: '2px 4px',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAdd}
+                    disabled={!newTitle.trim() || submitting}
+                    style={{
+                      border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 500,
+                      padding: '4px 12px', cursor: newTitle.trim() ? 'pointer' : 'default',
+                      background: newTitle.trim() ? color : 'hsl(var(--muted))',
+                      color: newTitle.trim() ? 'white' : 'hsl(var(--muted-foreground))',
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
