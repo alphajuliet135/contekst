@@ -31,8 +31,16 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Migration script and SQL migration files
+COPY --chown=nextjs:nodejs scripts/migrate.js ./scripts/migrate.js
+COPY --chown=nextjs:nodejs server/db/migrations ./server/db/migrations
+
 # Data directory for SQLite
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+
+# Entrypoint — runs migrations then starts the server
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
 USER nextjs
 
@@ -41,4 +49,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["./entrypoint.sh"]
