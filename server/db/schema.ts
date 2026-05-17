@@ -27,6 +27,7 @@ export const contexts = sqliteTable('contexts', {
   color: text('color').notNull().default('#378ADD'),
   icon: text('icon').notNull().default('circle'),
   order: integer('order').notNull().default(0),
+  description: text('description'),
   createdAt: text('created_at').default(sql`(current_timestamp)`),
 })
 

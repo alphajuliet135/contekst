@@ -11,6 +11,7 @@ export interface Context {
   color: string
   icon: string
   order: number
+  description?: string | null
   createdAt: string | null
 }
 

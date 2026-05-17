@@ -56,7 +56,7 @@ export default async function MicroPage() {
   }
 
   return (
-    <div style={{ padding: '40px 44px' }}>
+    <div className="page-pad">
       {/* Page header */}
       <div style={{ marginBottom: 36 }}>
         <h1 style={{ fontSize: 22, fontWeight: 500, letterSpacing: -0.3, margin: 0 }}>

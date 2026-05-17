@@ -7,7 +7,7 @@ import {
 } from '@/server/db/schema'
 import { eq, and, inArray, or, gte } from 'drizzle-orm'
 import type { WidgetType } from '@/lib/types'
-import { colorTint } from '@/lib/utils'
+import { ContextHeader } from '@/components/layout/ContextHeader'
 import { TodosWidget } from '@/components/widgets/TodosWidget'
 import { DatesWidget } from '@/components/widgets/DatesWidget'
 import { NotesWidget } from '@/components/widgets/NotesWidget'
@@ -121,101 +121,36 @@ export default async function ContextPage({ params }: Props) {
     nextEventText,
   ].filter(Boolean).join(' · ')
 
-  async function demoteToMicro() {
-    'use server'
-    await db.update(contexts).set({ type: 'micro' })
-      .where(and(eq(contexts.id, id), eq(contexts.userId, userId)))
-    redirect('/micro')
-  }
-
-  async function promoteToMacro() {
-    'use server'
-    await db.update(contexts).set({ type: 'macro' })
-      .where(and(eq(contexts.id, id), eq(contexts.userId, userId)))
-    redirect(`/ctx/${id}`)
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-      {/* Colored header */}
-      <div style={{
-        background: colorTint(context.color, 0.12),
-        borderBottom: `0.5px solid ${colorTint(context.color, 0.25)}`,
-        padding: '20px 40px',
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        gap: 16,
-        flexShrink: 0,
-      }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
-            <span style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: context.color,
-              flexShrink: 0,
-            }} />
-            <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: -0.4, margin: 0 }}>
-              {context.name}
-            </h1>
-          </div>
-          <p style={{
-            fontSize: 13,
-            color: context.color,
-            margin: 0,
-            paddingLeft: 20,
-            opacity: 0.9,
-          }}>
-            {fullMeta || 'Macro context'}
-          </p>
-        </div>
-
-        <form action={context.type === 'macro' ? demoteToMicro : promoteToMacro}>
-          <button
-            type="submit"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 12px',
-              borderRadius: 7,
-              border: `0.5px solid ${colorTint(context.color, 0.35)}`,
-              background: colorTint(context.color, 0.08),
-              fontSize: 12,
-              color: 'hsl(var(--muted-foreground))',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              marginTop: 4,
-            }}
-          >
-            {context.type === 'macro' ? 'Move to Micro' : 'Promote to Macro'}
-          </button>
-        </form>
-      </div>
+      <ContextHeader
+        contextId={id}
+        name={context.name}
+        color={context.color}
+        type={context.type}
+        description={context.description ?? null}
+        meta={fullMeta}
+      />
 
       {/* Widget grid */}
-      <div style={{ flex: 1, padding: '20px 44px 24px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 12,
-        }}>
+      <div className="page-pad" style={{ flex: 1, paddingBottom: 24 }}>
+        <div className="widget-grid">
           {isEnabled('todos') && (
             <TodosWidget todos={ctxTodos} color={context.color} contextId={id} />
           )}
           {isEnabled('dates') && (
-            <DatesWidget dates={ctxDates} color={context.color} />
+            <DatesWidget dates={ctxDates} color={context.color} contextId={id} />
           )}
           {isEnabled('notes') && (
             <div style={{ gridColumn: '1 / -1' }}>
-              <NotesWidget notes={ctxNotes} color={context.color} />
+              <NotesWidget notes={ctxNotes} color={context.color} contextId={id} />
             </div>
           )}
           {isEnabled('habits') && (
-            <HabitsWidget habits={ctxHabits} logs={todayLogs} color={context.color} />
+            <HabitsWidget habits={ctxHabits} logs={todayLogs} color={context.color} contextId={id} />
           )}
           {isEnabled('links') && (
-            <LinksWidget links={ctxLinks} color={context.color} />
+            <LinksWidget links={ctxLinks} color={context.color} contextId={id} />
           )}
           {isEnabled('people') && (
             <PeopleWidget people={ctxPeople} color={context.color} />

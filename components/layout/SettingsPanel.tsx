@@ -245,11 +245,19 @@ export function SettingsPanel({ user, onClose }: Props) {
           {/* Appearance */}
           <section style={{ marginBottom: 28 }}>
             <SectionLabel>Appearance</SectionLabel>
-            <div style={{
-              display: 'flex',
-              background: 'hsl(var(--muted))',
-              borderRadius: 8, padding: 3,
-            }}>
+            {/* Segmented control with animated sliding pill */}
+            <div style={{ position: 'relative', display: 'flex', background: 'hsl(var(--muted))', borderRadius: 8, padding: 3 }}>
+              {/* Sliding indicator */}
+              <div style={{
+                position: 'absolute', top: 3, bottom: 3, left: 3,
+                width: 'calc((100% - 6px) / 3)',
+                borderRadius: 6,
+                background: 'hsl(var(--card))',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                transform: `translateX(calc(${THEMES.findIndex(t => t.value === theme)} * 100%))`,
+                transition: 'transform 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+                pointerEvents: 'none',
+              }} />
               {THEMES.map(({ value, label, Icon }) => {
                 const active = theme === value
                 return (
@@ -257,16 +265,16 @@ export function SettingsPanel({ user, onClose }: Props) {
                     key={value}
                     onClick={() => handleTheme(value)}
                     style={{
-                      flex: 1,
+                      flex: 1, position: 'relative', zIndex: 1,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       gap: 5,
                       padding: '7px 0',
                       borderRadius: 6, border: 'none',
-                      background: active ? 'hsl(var(--card))' : 'transparent',
+                      background: 'transparent',
                       color: active ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
                       fontSize: 12, fontWeight: active ? 500 : 400,
                       cursor: 'pointer',
-                      boxShadow: active ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
+                      transition: 'color 150ms ease',
                     }}
                   >
                     <Icon size={12} strokeWidth={active ? 2 : 1.5} />

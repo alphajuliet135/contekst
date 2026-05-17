@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, Plus, Check } from 'lucide-react'
+import { CheckSquare, Plus, Check, Trash2 } from 'lucide-react'
 import type { Todo, Priority } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 
@@ -61,6 +61,17 @@ export function TodosWidget({ todos, color, contextId }: Props) {
       body: JSON.stringify({ done: nowDone, completedAt }),
     })
     router.refresh()
+  }
+
+  // ── Delete task ─────────────────────────────────────────────────────────────
+
+  async function deleteTodo(e: React.MouseEvent, id: string) {
+    e.stopPropagation()
+    setItems(prev => prev.filter(t => t.id !== id))
+    if (!id.startsWith('temp-')) {
+      await fetch(`/api/todos/${id}`, { method: 'DELETE' })
+      router.refresh()
+    }
   }
 
   // ── Add task ────────────────────────────────────────────────────────────────
@@ -188,6 +199,19 @@ export function TodosWidget({ todos, color, contextId }: Props) {
               <span style={{ ...BADGE_BASE, ...BADGE[todo.priority] }}>
                 {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Med' : 'Low'}
               </span>
+              {/* Delete */}
+              <button
+                onClick={e => deleteTodo(e, todo.id)}
+                style={{
+                  background: 'none', border: 'none', padding: 3, marginTop: 1,
+                  color: 'hsl(var(--muted-foreground))', cursor: 'pointer',
+                  borderRadius: 4, display: 'flex', alignItems: 'center', opacity: 0.4,
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.4' }}
+              >
+                <Trash2 size={11} strokeWidth={1.5} />
+              </button>
             </div>
           ))}
 
@@ -221,6 +245,18 @@ export function TodosWidget({ todos, color, contextId }: Props) {
                     </span>
                   </div>
                   <span style={{ ...BADGE_BASE, ...BADGE.done }}>Done</span>
+                  <button
+                    onClick={e => deleteTodo(e, todo.id)}
+                    style={{
+                      background: 'none', border: 'none', padding: 3, marginTop: 1,
+                      color: 'hsl(var(--muted-foreground))', cursor: 'pointer',
+                      borderRadius: 4, display: 'flex', alignItems: 'center', opacity: 0.4,
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.4' }}
+                  >
+                    <Trash2 size={11} strokeWidth={1.5} />
+                  </button>
                 </div>
               ))}
             </>

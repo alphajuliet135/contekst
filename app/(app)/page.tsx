@@ -6,6 +6,26 @@ import { eq, and, lte, gte } from 'drizzle-orm'
 import { Calendar, ArrowRight } from 'lucide-react'
 import { formatDate, colorTint } from '@/lib/utils'
 import { TodoCheckbox } from '@/components/ui/TodoCheckbox'
+import { Greeting } from '@/components/mission-control/Greeting'
+
+// ── Countdown helper ─────────────────────────────────────────────────────────
+
+function getCountdown(dateStr: string, today: string): string {
+  const [y, m, d]   = dateStr.split('-').map(Number)
+  const [ty, tm, td] = today.split('-').map(Number)
+  const diff = Math.round(
+    (new Date(y, m - 1, d).getTime() - new Date(ty, tm - 1, td).getTime()) / 86400000
+  )
+  if (diff <= 0) return 'Today'
+  if (diff === 1) return 'Tomorrow'
+  if (diff < 7)  return `In ${diff} days`
+  if (diff < 14) return 'In 1 week'
+  if (diff < 21) return 'In 2 weeks'
+  if (diff < 28) return 'In 3 weeks'
+  if (diff < 45) return 'In 1 month'
+  if (diff < 75) return 'In 2 months'
+  return `In ${Math.round(diff / 30)} months`
+}
 
 // ── Shared badge styles ──────────────────────────────────────────────────────
 
@@ -90,10 +110,7 @@ export default async function MissionControlPage() {
 
   const pinnedTodos = activeTodos.filter(t => t.pinned)
 
-  const hour = new Date().getHours()
-  const timeOfDay = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const firstName = userName?.split(' ')[0]
-  const greeting = firstName ? `${timeOfDay}, ${firstName}` : timeOfDay
+  const firstName = userName?.split(' ')[0] ?? null
 
   const dateLabel = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -102,13 +119,11 @@ export default async function MissionControlPage() {
   return (
     <div style={{ display: 'flex', flex: 1 }}>
       {/* Main content */}
-      <div style={{ flex: 1, padding: '36px 40px', minWidth: 0 }}>
+      <div className="page-pad" style={{ flex: 1, minWidth: 0 }}>
 
         {/* Greeting row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 36 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: -0.5, margin: 0, lineHeight: 1.15 }}>
-            {greeting}
-          </h1>
+          <Greeting firstName={firstName} />
           <span style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))', flexShrink: 0, paddingBottom: 3 }}>
             {dateLabel}
           </span>
@@ -229,7 +244,12 @@ export default async function MissionControlPage() {
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title}</span>
-                            {ctx && <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>{ctx.name}</span>}
+                            <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>
+                              {ctx ? `${ctx.name} · ` : ''}
+                              <span style={{ color: ctx?.color ?? 'hsl(var(--muted-foreground))' }}>
+                                {getCountdown(d.date, today)}
+                              </span>
+                            </span>
                           </div>
                         </div>
                       )
@@ -308,13 +328,13 @@ export default async function MissionControlPage() {
         )}
       </div>
 
-      {/* Micro sidebar */}
+      {/* Micro sidebar — hidden on mobile */}
       {micros.length > 0 && (
-        <aside style={{
+        <aside className="page-pad hide-on-mobile" style={{
           width: 248,
           flexShrink: 0,
           borderLeft: '0.5px solid hsl(var(--border))',
-          padding: '36px 16px',
+          flexDirection: 'column',
         }}>
           <p style={{
             fontSize: 11, fontWeight: 500, color: 'hsl(var(--muted-foreground))',

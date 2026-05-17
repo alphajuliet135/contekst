@@ -106,6 +106,48 @@
   }
 }
 
+/* ── Responsive layout utilities ──────────────────────────────────── */
+
+/* Page-level padding — use instead of hardcoded inline padding */
+.page-pad {
+  padding: 36px 40px;
+}
+
+/* Widget grid — 2 cols on desktop, 1 col on mobile */
+.widget-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Hidden on small screens (e.g. Mission Control micro sidebar) */
+.hide-on-mobile {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .page-pad {
+    padding: 20px 16px;
+  }
+
+  .widget-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+/* Topbar: allow horizontal scroll when many context tabs are present */
+header {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+header::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Scrollbar ─────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
