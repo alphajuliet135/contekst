@@ -1,10 +1,18 @@
 import { signIn } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
+import { db } from '@/server/db'
+import { users } from '@/server/db/schema'
+import { sql } from 'drizzle-orm'
+import Link from 'next/link'
 
 export default async function LoginPage() {
   const session = await auth()
   if (session) redirect('/')
+
+  // First-run: if no users exist, send to setup
+  const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(users)
+  if (count === 0) redirect('/signup')
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'hsl(var(--background))' }}>
@@ -14,12 +22,13 @@ export default async function LoginPage() {
         borderRadius: 16,
         padding: '40px 36px',
         width: 360,
+        maxWidth: 'calc(100vw - 32px)',
       }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3, margin: 0 }}>
             conte<span style={{ color: 'hsl(var(--muted-foreground))', fontWeight: 400 }}>k</span>st
           </h1>
-          <p style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))', marginTop: 4 }}>
+          <p style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))', marginTop: 4, marginBottom: 0 }}>
             Sign in to your space
           </p>
         </div>
@@ -47,6 +56,7 @@ export default async function LoginPage() {
                 padding: '8px 12px',
                 fontSize: 14,
                 background: 'hsl(var(--background))',
+                color: 'hsl(var(--foreground))',
                 outline: 'none',
               }}
             />
@@ -64,6 +74,7 @@ export default async function LoginPage() {
                 padding: '8px 12px',
                 fontSize: 14,
                 background: 'hsl(var(--background))',
+                color: 'hsl(var(--foreground))',
                 outline: 'none',
               }}
             />
