@@ -1,6 +1,6 @@
+// Runs Drizzle SQL migrations using only better-sqlite3 (no drizzle-orm required).
+// better-sqlite3 is in serverExternalPackages so it's always present in the standalone image.
 const Database = require('better-sqlite3')
-const { drizzle } = require('drizzle-orm/better-sqlite3')
-const { migrate } = require('drizzle-orm/better-sqlite3/migrator')
 const path = require('path')
 const fs = require('fs')
 
@@ -11,14 +11,38 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true })
 }
 
-const client = new Database(dbPath)
-client.pragma('journal_mode = WAL')
-client.pragma('foreign_keys = ON')
+const db = new Database(dbPath)
+db.pragma('journal_mode = WAL')
+db.pragma('foreign_keys = ON')
 
-const db = drizzle(client)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS __migrations (
+    tag TEXT PRIMARY KEY,
+    applied_at TEXT DEFAULT (current_timestamp)
+  )
+`)
 
-console.log('Running database migrations...')
-migrate(db, { migrationsFolder: path.join(__dirname, '../server/db/migrations') })
+const migrationsDir = path.join(__dirname, '../server/db/migrations')
+const journal = JSON.parse(fs.readFileSync(path.join(migrationsDir, 'meta/_journal.json'), 'utf8'))
+
+const applied = new Set(
+  db.prepare('SELECT tag FROM __migrations').all().map(r => r.tag)
+)
+
+for (const entry of journal.entries) {
+  if (applied.has(entry.tag)) continue
+
+  const sql = fs.readFileSync(path.join(migrationsDir, `${entry.tag}.sql`), 'utf8')
+  const statements = sql.split('--> statement-breakpoint').map(s => s.trim()).filter(Boolean)
+
+  console.log(`Applying migration: ${entry.tag}`)
+  db.transaction(() => {
+    for (const statement of statements) {
+      db.exec(statement)
+    }
+    db.prepare('INSERT INTO __migrations (tag) VALUES (?)').run(entry.tag)
+  })()
+}
+
 console.log('Migrations complete.')
-
-client.close()
+db.close()
