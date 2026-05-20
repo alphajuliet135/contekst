@@ -52,7 +52,7 @@ function badge(priority: keyof typeof BADGE_STYLES): React.CSSProperties {
 
 export default async function MissionControlPage() {
   const session = await auth()
-  if (!session) redirect('/login')
+  if (!session?.user?.id) redirect('/login')
   const userId = session.user.id
 
   // Read name directly from DB so it reflects updates without requiring re-auth

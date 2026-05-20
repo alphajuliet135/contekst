@@ -25,7 +25,7 @@ interface Props {
 export default async function ContextPage({ params }: Props) {
   const { id } = await params
   const session = await auth()
-  if (!session) redirect('/login')
+  if (!session?.user?.id) redirect('/login')
   const userId = session.user.id
 
   const context = await db.query.contexts.findFirst({
