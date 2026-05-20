@@ -42,6 +42,7 @@ Micros can be promoted to Macro (and demoted back) at any time.
 
 ## Mission Control
 
+- **Today** section — flat cross-context list of todos due today, overdue, or high-priority; sortable by Priority / Context / Due date; inline checkbox marks done
 - Smart by default — auto-surfaces urgent/overdue todos and upcoming dates per Macro context
 - Aggregated **Upcoming** card showing the next 30 days of dates across all contexts
 - Manual pinning — user can pin specific items to always appear
@@ -52,16 +53,17 @@ Micros can be promoted to Macro (and demoted back) at any time.
 
 ## Widgets
 
-All contexts share the same widget set. Each context independently controls which widgets are visible via a sticky toggle bar at the bottom of the dashboard.
+All contexts share the same widget set. Each context independently controls which widgets are visible and their layout via Edit Layout mode.
 
 | Widget (display name) | Internal type | Description |
 |-----------------------|---------------|-------------|
-| Priorities | `todos` | Task list with priority levels (high / medium / low); badge pills for status |
+| Priorities | `todos` | Task list with priority levels (high / medium / low); inline editing, click-to-open priority picker |
 | Upcoming dates | `dates` | Important upcoming dates with coloured date boxes |
-| Notes | `notes` | Freeform text area |
+| Notes | `notes` | Freeform notes with optional titles; inline editing |
 | Habits | `habits` | Recurring daily/weekly check-ins |
 | Links | `links` | Saved URLs relevant to the context |
 | People | `people` | Contacts associated with the context |
+| Mantra | `mantra` | Inspirational/motivational text pinned to the context |
 
 Micro cards show a condensed version — top priority todo and next upcoming date.
 
@@ -100,16 +102,19 @@ Dark, minimal, confident. Near-black backgrounds with context-colour accents. Ro
 - Active Mission Control tab: `hsl(var(--muted))` pill
 
 ### Macro dashboard
-- Header: context dot + name (24px/600), subtitle in context colour ("Macro context · N open todos · Next event in X days"), Move to Micro button
-- 2-column widget grid; Notes widget is full-width
-- Sticky widget toggle bar at bottom with icons in active pills
+- Header: context dot + name (24px/600), subtitle in context colour ("Macro/Micro context · N open todos · Next event in X days"), Move to Micro button
+- 2-column widget grid; drag-to-reorder and half/full-width resize per widget
+- "Edit layout" button (top-right of grid) reveals drag handles, resize toggles, and the widget toggle bar
+- Notes and Mantra widgets default to full-width; all others default to half-width
 
 ### Micro hub
 - Grid of compact cards (`minmax(280px, 1fr)`)
-- Each card: context name + dot, top priority todo (→ prefix), next upcoming date, Promote button
+- Each card: context name + dot, top priority todo (→ prefix), next upcoming date, Promote button, peek button (↗)
+- Peek button opens the full widget dashboard in a modal without promoting the context
 
 ### Mission Control
 - Greeting (28px/600) + date right-aligned on same row
+- **Today** section — full-width card with sort pills (Priority / Context / Due); todo rows with circular checkbox, title, due label, priority badge, context dot
 - "Needs attention" grid — one card per Macro context showing urgent todos with circular checkboxes + priority badges
 - Aggregated Upcoming dates card at end of grid
 - Pinned row below (grid layout, icon + type + context label)
@@ -117,23 +122,28 @@ Dark, minimal, confident. Near-black backgrounds with context-colour accents. Ro
 
 ---
 
-## V1 Scope
+## V1 Scope — Complete
 
 - [x] Auth (login, session)
-- [x] Mission Control (smart surfacing + manual pins + aggregated upcoming)
+- [x] First-run signup flow (no seed scripts needed)
+- [x] Mission Control (smart surfacing + manual pins + aggregated upcoming + Today section)
 - [x] Macro dashboards with widget grid
+- [x] Widget drag-to-reorder and resize per context
+- [x] Edit layout mode (drag handles, resize, toggle bar gated behind button)
 - [x] Widget toggle per context
+- [x] Mantra widget
 - [x] Micro hub with compact cards
+- [x] Micro context peek modal (full widget view without promoting)
 - [x] Promote / demote between Macro ↔ Micro
 - [x] Top bar navigation
 - [x] Dark mode UI
+- [x] Inline item creation and editing from UI (todos, notes, habits, links, people)
 
 ### Out of scope for V1
 - Mobile app
 - Multi-user (schema is ready, UI is not)
 - Calendar integrations
 - AI features beyond smart surfacing
-- Adding/editing items from the UI (data entry via seed scripts for now)
 
 ---
 
@@ -141,14 +151,14 @@ Dark, minimal, confident. Near-black backgrounds with context-colour accents. Ro
 
 | Layer | Choice | Notes |
 |-------|--------|-------|
-| Framework | Next.js 15 (App Router) | Server components by default |
+| Framework | Next.js 16 (App Router) | Server components by default |
 | Styling | Tailwind CSS + inline styles | CSS custom properties for all colours; `postcss.config.js` required |
 | DB | SQLite via Drizzle ORM | WAL mode enabled; `data/contekst.db` on host |
 | Auth | Auth.js v5 | Credentials login for V1; JWT sessions |
 | API | Next.js Route Handlers | `app/api/` — contexts, todos, widgets |
 | Container | Docker multi-stage, multi-arch (amd64 + arm64) | |
 | Registry | GitHub Container Registry (GHCR) | |
-| CI/CD | GitHub Actions — trigger on `v*` tag | |
+| CI/CD | GitHub Actions — trigger on merge to `main` (reads version from `package.json`, auto-tags) | |
 | Mobile (later) | React Native + Expo | Same API, shared types |
 
 ---
@@ -162,16 +172,20 @@ contekst/
 │   ├── (app)/                # Protected routes (layout fetches contexts + renders Topbar)
 │   │   ├── page.tsx          # Mission Control
 │   │   ├── micro/page.tsx    # Micro hub
-│   │   └── ctx/[id]/page.tsx # Macro dashboard
+│   │   ├── ctx/[id]/page.tsx # Macro dashboard (works for both Macro and Micro contexts)
+│   └── micro/page.tsx    # Micro hub
 │   └── api/
 │       ├── auth/[...nextauth]/
+│       ├── auth/signup/      # POST create first admin account
 │       ├── contexts/         # GET list, POST create, PATCH/DELETE [id]
+│       │   └── [id]/dashboard/ # GET full widget data (for Micro peek modal)
 │       ├── todos/            # GET list, POST create, PATCH/DELETE [id]
-│       └── widgets/          # PATCH toggle enabled state
+│       └── widgets/          # PATCH toggle/settings; order/ POST reorder
 ├── components/
-│   ├── widgets/              # One file per widget type (server components)
-│   ├── micro/                # PromoteButton (client)
-│   └── layout/               # Topbar (client — needs usePathname)
+│   ├── widgets/              # One file per widget type + WidgetDashboard (client, @dnd-kit)
+│   ├── micro/                # MicroCard, MicroContextModal, PromoteButton (clients)
+│   ├── mission-control/      # TodayFocus, Greeting (clients)
+│   └── layout/               # Topbar, ContextHeader, SettingsPanel (clients)
 ├── server/
 │   └── db/
 │       ├── schema.ts         # Drizzle schema — all 11 tables
@@ -188,7 +202,7 @@ contekst/
 ├── drizzle.config.ts
 ├── Dockerfile
 ├── docker-compose.yml
-└── .github/workflows/release.yml   # (to be created) multi-arch build on v* tag
+└── .github/workflows/release.yml   # multi-arch build on merge to main
 ```
 
 ---
@@ -198,11 +212,11 @@ contekst/
 ```
 users           id, email, password_hash, name, created_at
 contexts        id, user_id, name, type (macro|micro), color, icon, order, created_at
-widget_configs  id, context_id, widget_type, enabled, settings (JSON)
+widget_configs  id, context_id, widget_type, enabled, settings (JSON), order
                   unique(context_id, widget_type)
-todos           id, context_id, user_id, title, priority (high|medium|low), due_date, done, pinned, created_at
+todos           id, context_id, user_id, title, priority (high|medium|low), due_date, done, pinned, completed_at, created_at
 dates           id, context_id, user_id, title, date, note, pinned, created_at
-notes           id, context_id, user_id, content, pinned, updated_at
+notes           id, context_id, user_id, title, content, pinned, updated_at
 habits          id, context_id, user_id, title, frequency (daily|weekly), created_at
 habit_logs      id, habit_id, date, completed
 links           id, context_id, user_id, title, url, created_at
@@ -219,13 +233,12 @@ Everything is scoped to `user_id`. Multi-user support is a UI addition, not a sc
 # Local dev
 cp .env.example .env   # fill in AUTH_SECRET and NEXTAUTH_URL
 npm install
-npm run db:generate
-npm run db:migrate
 npm run dev
+# Migrations run automatically on startup.
+# On first visit, a signup form creates the admin account.
 
-# Release — triggers GitHub Actions multi-arch build → GHCR
-git tag v0.1.0
-git push origin v0.1.0
+# Release — merge develop → main; CI reads version from package.json,
+# creates the tag, and builds the multi-arch Docker image → GHCR.
 ```
 
 ---

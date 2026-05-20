@@ -9,11 +9,9 @@ This file contains all open todos, which include features and bugs. Once you hav
 
 ### Medium Effort
 - Single Context -> Prios: have multiple Prio Lists
-- Micro Context Page -> Create a peak feature. Looking and editing into the micro context, without turning it into a Macro Context.
 
 ### Big Effort
-- Misson Control Page -> Create a new "todos of the day" widget. Select prio tasks from all context
-- Overall app (Needs to be refined) -> Transform project into a expo project, for  
+- Overall app (Needs to be refined) -> Transform project into a expo project
 
 ### App (Big effort, still needs to be refined)
 - Transform into Expo App
@@ -23,17 +21,25 @@ This file contains all open todos, which include features and bugs. Once you hav
 - Top Bar -> Make it possible to change the order of the shown contexts
 
 ## Misc
-- Docs (every time) -> Update docs and CLAUDE.md
+- Docs (every time) -> Update docs and CLAUDE.md ✓ (done for v0.2.0)
 - Logo -> Update and make it look prettier
 - Backup Options -> If the container ever fails. Maybe JSON or csv export. Whatever works best. Maybe also backup option to a network folder.
 - Calendar and Todos (Don't do ri) -> Give option to maybe connect to Services like Google Calendar or iCloud
 
 # Completed Todos
 
-### Small Effort (all)
+### v0.2.0
+- Micro Context Page -> Create a peek feature (modal overlay, full widget dashboard, no promotion needed).
+- Mission Control -> "Today" section — cross-context list of todos due today / overdue / high-priority, sortable.
+- Macro Context -> Widget resize (half/full width toggle per widget).
+- Macro Context -> Edit layout mode (drag/resize/toggle bar gated behind button).
+- Macro Context -> Inline priority picker (H/M/L pills, no list-jumping).
+- First-run signup flow — no manual DB inserts needed.
+
+### v0.1.x — Small Effort (all)
 - Macro Context -> Make prio list entries editable.
 - Macro Context -> Give option for title of notes.
 - Mission Control & Macro Context -> Have a Mantra Widget.
 - Settings -> Show Version Number of software
-- Macro Context -> Widget drag-to-reorder (resize out of scope). Mission Control/Micro context-card reordering tracked separately as a bug.
+- Macro Context -> Widget drag-to-reorder.
 
