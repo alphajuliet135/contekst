@@ -8,15 +8,9 @@ import {
 import { eq, and, inArray, or, gte } from 'drizzle-orm'
 import type { WidgetType } from '@/lib/types'
 import { ContextHeader } from '@/components/layout/ContextHeader'
-import { TodosWidget } from '@/components/widgets/TodosWidget'
-import { DatesWidget } from '@/components/widgets/DatesWidget'
-import { NotesWidget } from '@/components/widgets/NotesWidget'
-import { HabitsWidget } from '@/components/widgets/HabitsWidget'
-import { LinksWidget } from '@/components/widgets/LinksWidget'
-import { PeopleWidget } from '@/components/widgets/PeopleWidget'
-import { WidgetToggleBar } from '@/components/widgets/WidgetToggleBar'
+import { WidgetDashboard } from '@/components/widgets/WidgetDashboard'
 
-const ALL_WIDGET_TYPES: WidgetType[] = ['todos', 'dates', 'notes', 'habits', 'links', 'people']
+const ALL_WIDGET_TYPES: WidgetType[] = ['todos', 'dates', 'notes', 'habits', 'links', 'people', 'mantra']
 
 interface Props {
   params: Promise<{ id: string }>
@@ -85,14 +79,29 @@ export default async function ContextPage({ params }: Props) {
       })
     : []
 
+  // Mantra text from widget_configs.settings
+  const mantraConfig = configs.find(c => c.widgetType === 'mantra')
+  const mantraText = (mantraConfig?.settings as { text?: string } | null)?.text ?? null
+
   // Widget visibility: default all enabled, override from configs
   const configMap = new Map(configs.map(c => [c.widgetType, c.enabled]))
+  const orderMap  = new Map(configs.map(c => [c.widgetType, c.order]))
   const isEnabled = (type: WidgetType) =>
-    configMap.has(type) ? (configMap.get(type) ?? true) : true
+    configMap.has(type) ? (configMap.get(type) ?? true) : type !== 'mantra'
+
+  const orderedEnabledTypes = ALL_WIDGET_TYPES
+    .map(type => ({ type, order: orderMap.get(type) ?? 99 }))
+    .filter(({ type }) => isEnabled(type))
+    .sort((a, b) => a.order - b.order)
+    .map(({ type }) => type)
 
   const initialEnabled = Object.fromEntries(
     ALL_WIDGET_TYPES.map(type => [type, isEnabled(type)])
   ) as Record<WidgetType, boolean>
+
+  const widgetSettings = Object.fromEntries(
+    configs.map(c => [c.widgetType, (c.settings as Record<string, unknown>) ?? {}])
+  ) as Partial<Record<WidgetType, Record<string, unknown>>>
 
   // Header meta line
   const activeTodos = ctxTodos.filter(t => !t.done).length
@@ -132,34 +141,21 @@ export default async function ContextPage({ params }: Props) {
         meta={fullMeta}
       />
 
-      {/* Widget grid */}
-      <div className="page-pad" style={{ flex: 1, paddingBottom: 24 }}>
-        <div className="widget-grid">
-          {isEnabled('todos') && (
-            <TodosWidget todos={ctxTodos} color={context.color} contextId={id} />
-          )}
-          {isEnabled('dates') && (
-            <DatesWidget dates={ctxDates} color={context.color} contextId={id} />
-          )}
-          {isEnabled('notes') && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <NotesWidget notes={ctxNotes} color={context.color} contextId={id} />
-            </div>
-          )}
-          {isEnabled('habits') && (
-            <HabitsWidget habits={ctxHabits} logs={todayLogs} color={context.color} contextId={id} />
-          )}
-          {isEnabled('links') && (
-            <LinksWidget links={ctxLinks} color={context.color} contextId={id} />
-          )}
-          {isEnabled('people') && (
-            <PeopleWidget people={ctxPeople} color={context.color} />
-          )}
-        </div>
-      </div>
-
-      {/* Widget toggle bar */}
-      <WidgetToggleBar contextId={id} color={context.color} initialEnabled={initialEnabled} />
+      <WidgetDashboard
+        contextId={id}
+        contextColor={context.color}
+        orderedEnabledTypes={orderedEnabledTypes}
+        initialEnabled={initialEnabled}
+        widgetSettings={widgetSettings}
+        todos={ctxTodos}
+        dates={ctxDates}
+        notes={ctxNotes}
+        habits={ctxHabits}
+        todayLogs={todayLogs}
+        links={ctxLinks}
+        people={ctxPeople}
+        mantraText={mantraText}
+      />
     </div>
   )
 }

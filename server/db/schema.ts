@@ -35,10 +35,11 @@ export const widgetConfigs = sqliteTable('widget_configs', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   contextId: text('context_id').notNull().references(() => contexts.id, { onDelete: 'cascade' }),
   widgetType: text('widget_type', {
-    enum: ['todos', 'dates', 'notes', 'habits', 'links', 'people'],
+    enum: ['todos', 'dates', 'notes', 'habits', 'links', 'people', 'mantra'],
   }).notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
   settings: text('settings', { mode: 'json' }),
+  order: integer('order').notNull().default(0),
 }, (t) => ({
   uniqContextWidget: uniqueIndex('widget_configs_ctx_type_uniq').on(t.contextId, t.widgetType),
 }))
@@ -77,6 +78,7 @@ export const notes = sqliteTable('notes', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   contextId: text('context_id').notNull().references(() => contexts.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title'),
   content: text('content').notNull().default(''),
   pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
   updatedAt: text('updated_at').default(sql`(current_timestamp)`),

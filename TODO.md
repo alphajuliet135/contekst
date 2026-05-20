@@ -5,11 +5,7 @@ This file contains all open todos, which include features and bugs. Once you hav
 ## Features
 
 ### Small Effort
-- Macro Context -> Make prio list entries editable.
-- Macro Context -> Give option for title of notes.
-- Mission Control & Macro Context -> Have a Mantra Widget.
-- Settings -> Show Version Number of software
-- Mission Control, Macro & Micro Context -> Make it possible to rearrange widgets. And if possible even resize
+~~All complete~~
 
 ### Medium Effort
 - Single Context -> Prios: have multiple Prio Lists
@@ -33,4 +29,11 @@ This file contains all open todos, which include features and bugs. Once you hav
 - Calendar and Todos (Don't do ri) -> Give option to maybe connect to Services like Google Calendar or iCloud
 
 # Completed Todos
+
+### Small Effort (all)
+- Macro Context -> Make prio list entries editable.
+- Macro Context -> Give option for title of notes.
+- Mission Control & Macro Context -> Have a Mantra Widget.
+- Settings -> Show Version Number of software
+- Macro Context -> Widget drag-to-reorder (resize out of scope). Mission Control/Micro context-card reordering tracked separately as a bug.
 

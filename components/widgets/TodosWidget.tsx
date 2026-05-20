@@ -38,6 +38,9 @@ export function TodosWidget({ todos, color, contextId }: Props) {
   const [newTitle, setNewTitle]       = useState('')
   const [newPriority, setNewPriority] = useState<Priority>('medium')
   const [submitting, setSubmitting]   = useState(false)
+  const [editingTodoId, setEditingTodoId] = useState<string | null>(null)
+  const [draftTitle, setDraftTitle]       = useState('')
+  const editInputRef = useRef<HTMLInputElement>(null)
 
   // Sync with server after router.refresh()
   useEffect(() => { setItems(todos) }, [todos])
@@ -46,6 +49,11 @@ export function TodosWidget({ todos, color, contextId }: Props) {
   useEffect(() => {
     if (showForm) inputRef.current?.focus()
   }, [showForm])
+
+  // Auto-focus edit input when a todo enters edit mode
+  useEffect(() => {
+    if (editingTodoId) editInputRef.current?.focus()
+  }, [editingTodoId])
 
   // ── Toggle done ─────────────────────────────────────────────────────────────
 
@@ -104,6 +112,33 @@ export function TodosWidget({ todos, color, contextId }: Props) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') handleAdd()
     if (e.key === 'Escape') { setShowForm(false); setNewTitle(''); setNewPriority('medium') }
+  }
+
+  // ── Inline title editing ────────────────────────────────────────────────────
+
+  function startEditingTodo(todo: Todo) {
+    setEditingTodoId(todo.id)
+    setDraftTitle(todo.title)
+  }
+
+  async function handleTitleBlur() {
+    if (!editingTodoId) return
+    const id = editingTodoId
+    const title = draftTitle.trim()
+    setEditingTodoId(null)
+    if (!title || title === items.find(t => t.id === id)?.title) return
+    setItems(prev => prev.map(t => t.id === id ? { ...t, title } : t))
+    await fetch(`/api/todos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    })
+    router.refresh()
+  }
+
+  function handleTitleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') { e.currentTarget.blur() }
+    if (e.key === 'Escape') { setEditingTodoId(null) }
   }
 
   // ── Sorted lists ────────────────────────────────────────────────────────────
@@ -182,9 +217,28 @@ export function TodosWidget({ todos, color, contextId }: Props) {
               />
               {/* Title + due date */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13, lineHeight: 1.4, display: 'block' }}>
-                  {todo.title}
-                </span>
+                {editingTodoId === todo.id ? (
+                  <input
+                    ref={editInputRef}
+                    value={draftTitle}
+                    onChange={e => setDraftTitle(e.target.value)}
+                    onBlur={handleTitleBlur}
+                    onKeyDown={handleTitleKeyDown}
+                    style={{
+                      background: 'none', border: 'none', outline: 'none',
+                      fontSize: 13, lineHeight: 1.4, display: 'block',
+                      color: 'hsl(var(--foreground))',
+                      width: '100%', padding: 0, fontFamily: 'inherit',
+                    }}
+                  />
+                ) : (
+                  <span
+                    onClick={() => startEditingTodo(todo)}
+                    style={{ fontSize: 13, lineHeight: 1.4, display: 'block', cursor: 'text' }}
+                  >
+                    {todo.title}
+                  </span>
+                )}
                 {todo.dueDate && (
                   <span style={{
                     fontSize: 11,

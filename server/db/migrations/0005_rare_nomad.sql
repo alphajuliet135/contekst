@@ -1,0 +1,1 @@
+ALTER TABLE `widget_configs` ADD `order` integer DEFAULT 0 NOT NULL;

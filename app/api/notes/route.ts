@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { contextId, content = '' } = body
+  const { contextId, content = '', title } = body
 
   if (!contextId) {
     return NextResponse.json({ error: 'contextId required' }, { status: 400 })
@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     contextId,
     userId: session.user.id,
     content,
+    title: title ?? null,
   }).returning()
 
   return NextResponse.json(row, { status: 201 })
