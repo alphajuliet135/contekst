@@ -71,4 +71,13 @@ function runMigrations(sqliteClient: Database.Database, migrationsFolder: string
   }
 }
 
-runMigrations(client, path.join(process.cwd(), 'server/db/migrations'))
+// In Docker production, scripts/migrate.js (run by entrypoint.sh) already applied
+// all migrations and tracks them in __migrations. Skip the runtime runner to avoid
+// a redundant second pass on every startup.
+const scriptsMigrated = client.prepare(
+  "SELECT 1 FROM sqlite_master WHERE type='table' AND name='__migrations'"
+).get()
+
+if (!scriptsMigrated) {
+  runMigrations(client, path.join(process.cwd(), 'server/db/migrations'))
+}

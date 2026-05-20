@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { auth, signOut } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/server/db'
 import { contexts, users } from '@/server/db/schema'
@@ -19,6 +19,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       columns: { name: true, email: true },
     }),
   ])
+
+  // JWT token references a user that no longer exists in the DB (e.g. after data loss) —
+  // clear the stale session so the user lands on login/signup cleanly.
+  if (!dbUser) {
+    await signOut({ redirectTo: '/login' })
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
