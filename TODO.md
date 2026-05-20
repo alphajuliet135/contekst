@@ -23,6 +23,7 @@ This file contains all open todos, which include features and bugs. Once you hav
 ## Misc
 - Docs (every time) -> Update docs and CLAUDE.md ✓ (done for v0.2.0)
 - Logo -> Update and make it look prettier
+- Data & Model -> Give backup and restore option, also maybe store data in a persisted storage folder
 - Backup Options -> If the container ever fails. Maybe JSON or csv export. Whatever works best. Maybe also backup option to a network folder.
 - Calendar and Todos (Don't do ri) -> Give option to maybe connect to Services like Google Calendar or iCloud
 
