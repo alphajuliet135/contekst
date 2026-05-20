@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Plus, Calendar, X } from 'lucide-react'
+import { Check, Plus, Calendar, X, ExternalLink } from 'lucide-react'
 import type { Todo, Priority } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 import { PromoteButton } from './PromoteButton'
+import { MicroContextModal } from './MicroContextModal'
 
 const BADGE_BASE: React.CSSProperties = {
   borderRadius: 5, padding: '1px 6px', fontSize: 10, fontWeight: 500,
@@ -36,6 +37,7 @@ export function MicroCard({ ctx, initialTodos, initialDates, today }: Props) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const [showModal, setShowModal]     = useState(false)
   const [todos, setTodos]             = useState<Todo[]>(initialTodos)
   const [showForm, setShowForm]       = useState(false)
   const [newTitle, setNewTitle]       = useState('')
@@ -89,6 +91,7 @@ export function MicroCard({ ctx, initialTodos, initialDates, today }: Props) {
   const hasContent = sortedTodos.length > 0 || topDate !== null
 
   return (
+    <>
     <div className="card-shadow" style={{
       background: 'hsl(var(--card))',
       border: '0.5px solid hsl(var(--border))',
@@ -103,6 +106,18 @@ export function MicroCard({ ctx, initialTodos, initialDates, today }: Props) {
       }}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: ctx.color, flexShrink: 0 }} />
         <span style={{ fontSize: 13, fontWeight: 500, flex: 1, minWidth: 0 }}>{ctx.name}</span>
+        <button
+          onClick={() => setShowModal(true)}
+          style={{
+            display: 'flex', alignItems: 'center',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'hsl(var(--muted-foreground))',
+            padding: 3, borderRadius: 5, opacity: 0.7,
+          }}
+          title="View full context"
+        >
+          <ExternalLink size={12} strokeWidth={1.5} />
+        </button>
         <PromoteButton contextId={ctx.id} />
       </div>
 
@@ -249,5 +264,15 @@ export function MicroCard({ ctx, initialTodos, initialDates, today }: Props) {
         )}
       </div>
     </div>
+
+    {showModal && (
+      <MicroContextModal
+        contextId={ctx.id}
+        contextName={ctx.name}
+        contextColor={ctx.color}
+        onClose={() => setShowModal(false)}
+      />
+    )}
+    </>
   )
 }

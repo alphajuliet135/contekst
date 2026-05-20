@@ -7,6 +7,7 @@ import { Calendar, ArrowRight } from 'lucide-react'
 import { formatDate, colorTint } from '@/lib/utils'
 import { TodoCheckbox } from '@/components/ui/TodoCheckbox'
 import { Greeting } from '@/components/mission-control/Greeting'
+import { TodayFocus } from '@/components/mission-control/TodayFocus'
 
 // ── Countdown helper ─────────────────────────────────────────────────────────
 
@@ -110,6 +111,13 @@ export default async function MissionControlPage() {
 
   const pinnedTodos = activeTodos.filter(t => t.pinned)
 
+  const dailyTodos = activeTodos
+    .filter(t => (t.dueDate != null && t.dueDate <= today) || t.priority === 'high')
+    .map(t => {
+      const ctx = userContexts.find(c => c.id === t.contextId)
+      return { ...t, contextName: ctx?.name ?? '', contextColor: ctx?.color ?? '#666666' }
+    })
+
   const firstName = userName?.split(' ')[0] ?? null
 
   const dateLabel = new Date().toLocaleDateString('en-GB', {
@@ -128,6 +136,13 @@ export default async function MissionControlPage() {
             {dateLabel}
           </span>
         </div>
+
+        {/* Today — overdue + due today todos */}
+        {dailyTodos.length > 0 && (
+          <section style={{ marginBottom: 40 }}>
+            <TodayFocus todos={dailyTodos} today={today} />
+          </section>
+        )}
 
         {/* Needs attention */}
         {macros.length > 0 && (

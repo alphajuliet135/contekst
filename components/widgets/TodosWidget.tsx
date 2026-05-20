@@ -38,9 +38,10 @@ export function TodosWidget({ todos, color, contextId }: Props) {
   const [newTitle, setNewTitle]       = useState('')
   const [newPriority, setNewPriority] = useState<Priority>('medium')
   const [submitting, setSubmitting]   = useState(false)
-  const [editingTodoId, setEditingTodoId] = useState<string | null>(null)
-  const [draftTitle, setDraftTitle]       = useState('')
-  const editInputRef = useRef<HTMLInputElement>(null)
+  const [editingTodoId, setEditingTodoId]     = useState<string | null>(null)
+  const [draftTitle, setDraftTitle]           = useState('')
+  const editInputRef                          = useRef<HTMLInputElement>(null)
+  const [editingPriorityId, setEditingPriorityId] = useState<string | null>(null)
 
   // Sync with server after router.refresh()
   useEffect(() => { setItems(todos) }, [todos])
@@ -54,6 +55,18 @@ export function TodosWidget({ todos, color, contextId }: Props) {
   useEffect(() => {
     if (editingTodoId) editInputRef.current?.focus()
   }, [editingTodoId])
+
+  // Close priority picker when clicking outside
+  useEffect(() => {
+    if (!editingPriorityId) return
+    function onMouseDown(e: MouseEvent) {
+      if (!(e.target as Element).closest('[data-prio-picker]')) {
+        setEditingPriorityId(null)
+      }
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [editingPriorityId])
 
   // ── Toggle done ─────────────────────────────────────────────────────────────
 
@@ -139,6 +152,17 @@ export function TodosWidget({ todos, color, contextId }: Props) {
   function handleTitleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') { e.currentTarget.blur() }
     if (e.key === 'Escape') { setEditingTodoId(null) }
+  }
+
+  async function selectPriority(todo: Todo, p: Priority) {
+    setEditingPriorityId(null)
+    if (p === todo.priority) return
+    setItems(prev => prev.map(t => t.id === todo.id ? { ...t, priority: p } : t))
+    await fetch(`/api/todos/${todo.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priority: p }),
+    })
   }
 
   // ── Sorted lists ────────────────────────────────────────────────────────────
@@ -249,10 +273,34 @@ export function TodosWidget({ todos, color, contextId }: Props) {
                   </span>
                 )}
               </div>
-              {/* Badge */}
-              <span style={{ ...BADGE_BASE, ...BADGE[todo.priority] }}>
-                {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Med' : 'Low'}
-              </span>
+              {/* Priority badge / inline picker */}
+              {editingPriorityId === todo.id ? (
+                <div data-prio-picker style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                  {(['high', 'medium', 'low'] as Priority[]).map(p => (
+                    <button
+                      key={p}
+                      onMouseDown={e => { e.stopPropagation(); selectPriority(todo, p) }}
+                      style={{
+                        ...BADGE_BASE,
+                        ...(p === todo.priority
+                          ? BADGE[p]
+                          : { background: 'transparent', color: 'hsl(var(--muted-foreground))', border: '0.5px solid hsl(var(--border))' }),
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {p === 'high' ? 'H' : p === 'medium' ? 'M' : 'L'}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  onMouseDown={e => { e.stopPropagation(); setEditingPriorityId(todo.id) }}
+                  title="Change priority"
+                  style={{ ...BADGE_BASE, ...BADGE[todo.priority], cursor: 'pointer', border: 'none' }}
+                >
+                  {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Med' : 'Low'}
+                </button>
+              )}
               {/* Delete */}
               <button
                 onClick={e => deleteTodo(e, todo.id)}

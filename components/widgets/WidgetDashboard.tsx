@@ -35,10 +35,11 @@ const FULL_WIDTH_DEFAULT: WidgetType[] = ['notes', 'mantra']
 // ── Sortable item wrapper ─────────────────────────────────────────────────────
 
 function SortableItem({
-  id, isFullWidth, onToggleSize, children,
+  id, isFullWidth, editMode, onToggleSize, children,
 }: {
   id: string
   isFullWidth: boolean
+  editMode: boolean
   onToggleSize: () => void
   children: React.ReactNode
 }) {
@@ -58,12 +59,14 @@ function SortableItem({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Centered top toolbar: drag grip + resize toggle, both appear on hover */}
+      {/* Centered top toolbar: drag grip + resize toggle, only visible in edit mode */}
       <div
         style={{
           position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 10,
           display: 'flex', alignItems: 'center', gap: 2,
-          opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease',
+          opacity: editMode && hovered ? 1 : 0,
+          pointerEvents: editMode ? 'auto' : 'none',
+          transition: 'opacity 150ms ease',
         }}
       >
         <div
@@ -123,6 +126,7 @@ export function WidgetDashboard({
   const router = useRouter()
   const [order, setOrder] = useState<WidgetType[]>(orderedEnabledTypes)
   const [settingsState, setSettingsState] = useState(widgetSettings)
+  const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => { setOrder(orderedEnabledTypes) }, [orderedEnabledTypes])
   useEffect(() => { setSettingsState(widgetSettings) }, [widgetSettings])
@@ -182,6 +186,21 @@ export function WidgetDashboard({
   return (
     <>
       <div className="page-pad" style={{ flex: 1, paddingBottom: 24 }}>
+        {/* Edit layout toggle */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <button
+            onClick={() => setIsEditing(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 500,
+              background: isEditing ? 'hsl(var(--foreground))' : 'hsl(var(--muted))',
+              color: isEditing ? 'hsl(var(--background))' : 'hsl(var(--muted-foreground))',
+            }}
+          >
+            {isEditing ? 'Done' : 'Edit layout'}
+          </button>
+        </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={order} strategy={rectSortingStrategy}>
             <div className="widget-grid">
@@ -189,6 +208,7 @@ export function WidgetDashboard({
                 <SortableItem
                   key={type}
                   id={type}
+                  editMode={isEditing}
                   isFullWidth={effectiveSize(type) === 'full'}
                   onToggleSize={() => handleToggleSize(type)}
                 >
@@ -199,7 +219,7 @@ export function WidgetDashboard({
           </SortableContext>
         </DndContext>
       </div>
-      <WidgetToggleBar contextId={contextId} color={contextColor} initialEnabled={initialEnabled} />
+      {isEditing && <WidgetToggleBar contextId={contextId} color={contextColor} initialEnabled={initialEnabled} />}
     </>
   )
 }
