@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, Calendar, FileText, Repeat2, Link2, Users } from 'lucide-react'
+import { CheckSquare, Calendar, FileText, Repeat2, Link2, Users, Quote } from 'lucide-react'
 import type { WidgetType } from '@/lib/types'
 import { colorTint } from '@/lib/utils'
 
@@ -13,6 +13,7 @@ const WIDGETS: { type: WidgetType; label: string; Icon: React.ElementType }[] = 
   { type: 'habits',  label: 'Habits',         Icon: Repeat2     },
   { type: 'links',   label: 'Links',          Icon: Link2       },
   { type: 'people',  label: 'People',         Icon: Users       },
+  { type: 'mantra',  label: 'Mantra',         Icon: Quote       },
 ]
 
 interface Props {

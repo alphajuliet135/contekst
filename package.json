@@ -13,31 +13,34 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "next": "^15.0.0",
+    "@auth/drizzle-adapter": "^1.4.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.0.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.36.0",
+    "lucide-react": "^0.460.0",
+    "next": "^16.2.6",
+    "next-auth": "^5.0.0-beta.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next-auth": "^5.0.0-beta.25",
-    "@auth/drizzle-adapter": "^1.4.0",
-    "drizzle-orm": "^0.36.0",
-    "better-sqlite3": "^11.0.0",
-    "bcryptjs": "^2.4.3",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.0",
-    "lucide-react": "^0.460.0",
-    "class-variance-authority": "^0.7.0"
+    "tailwind-merge": "^2.5.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/better-sqlite3": "^7.6.0",
-    "@types/bcryptjs": "^2.4.6",
-    "typescript": "^5.0.0",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.0",
     "autoprefixer": "^10.4.0",
     "drizzle-kit": "^0.28.0",
     "eslint": "^9.0.0",
-    "eslint-config-next": "^15.0.0"
+    "eslint-config-next": "^15.0.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.0.0"
   }
 }

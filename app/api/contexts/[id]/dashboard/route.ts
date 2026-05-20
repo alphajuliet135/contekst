@@ -1,45 +1,28 @@
 import { auth } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import { notFound } from 'next/navigation'
 import { db } from '@/server/db'
-import {
-  contexts, todos, dates, notes, habits, habitLogs, links, people, widgetConfigs,
-} from '@/server/db/schema'
+import { contexts, todos, dates, notes, habits, habitLogs, links, people, widgetConfigs } from '@/server/db/schema'
 import { eq, and, inArray, or, gte } from 'drizzle-orm'
+import { NextRequest, NextResponse } from 'next/server'
 import type { WidgetType } from '@/lib/types'
-import { ContextHeader } from '@/components/layout/ContextHeader'
-import { WidgetDashboard } from '@/components/widgets/WidgetDashboard'
 
 const ALL_WIDGET_TYPES: WidgetType[] = ['todos', 'dates', 'notes', 'habits', 'links', 'people', 'mantra']
 
-interface Props {
-  params: Promise<{ id: string }>
-}
-
-export default async function ContextPage({ params }: Props) {
-  const { id } = await params
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user?.id) redirect('/login')
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id } = await params
   const userId = session.user.id
 
   const context = await db.query.contexts.findFirst({
     where: and(eq(contexts.id, id), eq(contexts.userId, userId)),
   })
-  if (!context) notFound()
+  if (!context) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const today = new Date().toISOString().split('T')[0]
-  // Only show done tasks completed within the last 7 days
   const cutoff = new Date(Date.now() - 7 * 86400000).toISOString()
 
-  const [
-    ctxTodos,
-    ctxDates,
-    ctxNotes,
-    ctxHabits,
-    ctxLinks,
-    ctxPeople,
-    configs,
-  ] = await Promise.all([
+  const [ctxTodos, ctxDates, ctxNotes, ctxHabits, ctxLinks, ctxPeople, configs] = await Promise.all([
     db.query.todos.findMany({
       where: and(
         eq(todos.contextId, id),
@@ -79,11 +62,9 @@ export default async function ContextPage({ params }: Props) {
       })
     : []
 
-  // Mantra text from widget_configs.settings
   const mantraConfig = configs.find(c => c.widgetType === 'mantra')
   const mantraText = (mantraConfig?.settings as { text?: string } | null)?.text ?? null
 
-  // Widget visibility: default all enabled, override from configs
   const configMap = new Map(configs.map(c => [c.widgetType, c.enabled]))
   const orderMap  = new Map(configs.map(c => [c.widgetType, c.order]))
   const isEnabled = (type: WidgetType) =>
@@ -103,59 +84,19 @@ export default async function ContextPage({ params }: Props) {
     configs.map(c => [c.widgetType, (c.settings as Record<string, unknown>) ?? {}])
   ) as Partial<Record<WidgetType, Record<string, unknown>>>
 
-  // Header meta line
-  const activeTodos = ctxTodos.filter(t => !t.done).length
-  const metaParts = [
-    activeTodos > 0 ? `${activeTodos} todo${activeTodos === 1 ? '' : 's'}` : null,
-    ctxDates.length > 0 ? `${ctxDates.length} date${ctxDates.length === 1 ? '' : 's'}` : null,
-    ctxHabits.length > 0 ? `${ctxHabits.length} habit${ctxHabits.length === 1 ? '' : 's'}` : null,
-    ctxPeople.length > 0 ? `${ctxPeople.length} ${ctxPeople.length === 1 ? 'person' : 'people'}` : null,
-  ].filter(Boolean)
-  const meta = metaParts.join(' · ')
-
-  // Next event countdown
-  const nearestDate = ctxDates[0] ?? null
-  const daysUntil = nearestDate
-    ? Math.ceil((new Date(nearestDate.date + 'T12:00:00').getTime() - Date.now()) / 86400000)
-    : null
-  const nextEventText = daysUntil !== null
-    ? daysUntil <= 0 ? 'Event today'
-    : daysUntil === 1 ? 'Next event tomorrow'
-    : `Next event in ${daysUntil} days`
-    : null
-
-  const fullMeta = [
-    context.type === 'macro' ? 'Macro context' : 'Micro context',
-    activeTodos > 0 ? `${activeTodos} open todo${activeTodos === 1 ? '' : 's'}` : null,
-    nextEventText,
-  ].filter(Boolean).join(' · ')
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-      <ContextHeader
-        contextId={id}
-        name={context.name}
-        color={context.color}
-        type={context.type}
-        description={context.description ?? null}
-        meta={fullMeta}
-      />
-
-      <WidgetDashboard
-        contextId={id}
-        contextColor={context.color}
-        orderedEnabledTypes={orderedEnabledTypes}
-        initialEnabled={initialEnabled}
-        widgetSettings={widgetSettings}
-        todos={ctxTodos}
-        dates={ctxDates}
-        notes={ctxNotes}
-        habits={ctxHabits}
-        todayLogs={todayLogs}
-        links={ctxLinks}
-        people={ctxPeople}
-        mantraText={mantraText}
-      />
-    </div>
-  )
+  return NextResponse.json({
+    contextId: context.id,
+    contextColor: context.color,
+    orderedEnabledTypes,
+    initialEnabled,
+    widgetSettings,
+    todos: ctxTodos,
+    dates: ctxDates,
+    notes: ctxNotes,
+    habits: ctxHabits,
+    todayLogs,
+    links: ctxLinks,
+    people: ctxPeople,
+    mantraText,
+  })
 }

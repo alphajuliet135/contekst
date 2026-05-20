@@ -8,6 +8,7 @@ import type { Note } from '@/lib/types'
 interface NoteItem {
   id: string   // real DB id or 'temp-{timestamp}' for unsaved new notes
   content: string
+  title: string | null
 }
 
 interface Props {
@@ -20,15 +21,24 @@ export function NotesWidget({ notes, color, contextId }: Props) {
   const router = useRouter()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const [items, setItems]           = useState<NoteItem[]>(notes.map(n => ({ id: n.id, content: n.content })))
+  const [items, setItems]           = useState<NoteItem[]>(notes.map(n => ({ id: n.id, content: n.content, title: n.title ?? null })))
   const [editingId, setEditingId]   = useState<string | null>(null)
   const [draftContent, setDraft]    = useState('')
   const [savingId, setSavingId]     = useState<string | null>(null)
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
+  const [draftTitle, setDraftTitle]         = useState('')
+  const [hoveredId, setHoveredId]           = useState<string | null>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
   // Sync items when server re-renders after refresh
   useEffect(() => {
-    setItems(notes.map(n => ({ id: n.id, content: n.content })))
+    setItems(notes.map(n => ({ id: n.id, content: n.content, title: n.title ?? null })))
   }, [notes])
+
+  // Auto-focus title input when entering title edit mode
+  useEffect(() => {
+    if (editingTitleId) titleInputRef.current?.focus()
+  }, [editingTitleId])
 
   // Auto-focus + auto-size the textarea when a note enters edit mode
   useEffect(() => {
@@ -80,7 +90,7 @@ export function NotesWidget({ notes, color, contextId }: Props) {
         body: JSON.stringify({ contextId, content }),
       })
       const real = await res.json()
-      setItems(prev => prev.map(n => n.id === id ? { id: real.id, content } : n))
+      setItems(prev => prev.map(n => n.id === id ? { id: real.id, content, title: null } : n))
       setSavingId(null)
       router.refresh()
     } else {
@@ -97,11 +107,36 @@ export function NotesWidget({ notes, color, contextId }: Props) {
     }
   }
 
+  // ── Title editing ──────────────────────────────────────────────────────────
+
+  function startEditingTitle(e: React.MouseEvent, item: NoteItem) {
+    e.stopPropagation()
+    setEditingTitleId(item.id)
+    setDraftTitle(item.title ?? '')
+  }
+
+  async function handleTitleBlur() {
+    if (!editingTitleId) return
+    const id = editingTitleId
+    const title = draftTitle.trim() || null
+    setEditingTitleId(null)
+    if (title === items.find(n => n.id === id)?.title) return
+    setItems(prev => prev.map(n => n.id === id ? { ...n, title } : n))
+    if (!id.startsWith('temp-')) {
+      await fetch(`/api/notes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+      router.refresh()
+    }
+  }
+
   // ── Add new note ───────────────────────────────────────────────────────────
 
   function addNote() {
     const tempId = `temp-${Date.now()}`
-    setItems(prev => [...prev, { id: tempId, content: '' }])
+    setItems(prev => [...prev, { id: tempId, content: '', title: null }])
     setEditingId(tempId)
     setDraft('')
   }
@@ -172,9 +207,43 @@ export function NotesWidget({ notes, color, contextId }: Props) {
                   borderBottom: isLast ? 'none' : '0.5px solid hsl(var(--border))',
                   position: 'relative',
                 }}
+                onMouseEnter={() => setHoveredId(item.id)}
+                onMouseLeave={() => setHoveredId(null)}
               >
                 {isEditing ? (
                   <div style={{ padding: '12px 16px' }}>
+                    {/* Title input in edit mode */}
+                    {editingTitleId === item.id ? (
+                      <input
+                        ref={titleInputRef}
+                        value={draftTitle}
+                        onChange={e => setDraftTitle(e.target.value)}
+                        onBlur={handleTitleBlur}
+                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingTitleId(null) }}
+                        placeholder="Note title"
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          background: 'none', border: 'none', outline: 'none',
+                          fontSize: 15, fontWeight: 600, marginBottom: 6,
+                          color: 'hsl(var(--foreground))',
+                          fontFamily: 'inherit', padding: 0,
+                        }}
+                      />
+                    ) : item.title ? (
+                      <div
+                        onClick={e => startEditingTitle(e, item)}
+                        style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, cursor: 'text' }}
+                      >
+                        {item.title}
+                      </div>
+                    ) : (
+                      <div
+                        onClick={e => startEditingTitle(e, item)}
+                        style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', marginBottom: 6, cursor: 'text' }}
+                      >
+                        + Add title
+                      </div>
+                    )}
                     <textarea
                       ref={textareaRef}
                       value={draftContent}
@@ -212,6 +281,39 @@ export function NotesWidget({ notes, color, contextId }: Props) {
                       position: 'relative',
                     }}
                   >
+                    {/* Title in view mode */}
+                    {editingTitleId === item.id ? (
+                      <input
+                        ref={titleInputRef}
+                        value={draftTitle}
+                        onChange={e => setDraftTitle(e.target.value)}
+                        onBlur={handleTitleBlur}
+                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingTitleId(null) }}
+                        onClick={e => e.stopPropagation()}
+                        placeholder="Note title"
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          background: 'none', border: 'none', outline: 'none',
+                          fontSize: 15, fontWeight: 600, marginBottom: 4,
+                          color: 'hsl(var(--foreground))',
+                          fontFamily: 'inherit', padding: 0, display: 'block',
+                        }}
+                      />
+                    ) : item.title ? (
+                      <div
+                        onClick={e => startEditingTitle(e, item)}
+                        style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, cursor: 'text' }}
+                      >
+                        {item.title}
+                      </div>
+                    ) : hoveredId === item.id ? (
+                      <div
+                        onClick={e => startEditingTitle(e, item)}
+                        style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', marginBottom: 4, cursor: 'text', opacity: 0.6 }}
+                      >
+                        + Add title
+                      </div>
+                    ) : null}
                     <div style={{
                       fontSize: 13, lineHeight: 1.7,
                       color: item.content ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',

@@ -1,6 +1,6 @@
 export type ContextType = 'macro' | 'micro'
 export type Priority = 'high' | 'medium' | 'low'
-export type WidgetType = 'todos' | 'dates' | 'notes' | 'habits' | 'links' | 'people'
+export type WidgetType = 'todos' | 'dates' | 'notes' | 'habits' | 'links' | 'people' | 'mantra'
 export type Frequency = 'daily' | 'weekly'
 
 export interface Context {
@@ -21,6 +21,7 @@ export interface WidgetConfig {
   widgetType: WidgetType
   enabled: boolean
   settings?: Record<string, unknown> | null
+  order: number
 }
 
 export interface Todo {
@@ -50,6 +51,7 @@ export interface Note {
   id: string
   contextId: string
   userId: string
+  title?: string | null
   content: string
   pinned: boolean
   updatedAt: string | null

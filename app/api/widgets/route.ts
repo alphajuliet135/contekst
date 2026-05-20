@@ -10,14 +10,15 @@ export async function PATCH(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { contextId, widgetType, enabled } = body as {
+  const { contextId, widgetType, enabled, settings } = body as {
     contextId: string
     widgetType: WidgetType
-    enabled: boolean
+    enabled?: boolean
+    settings?: Record<string, unknown>
   }
 
-  if (!contextId || !widgetType || enabled === undefined) {
-    return NextResponse.json({ error: 'contextId, widgetType, and enabled required' }, { status: 400 })
+  if (!contextId || !widgetType || (enabled === undefined && settings === undefined)) {
+    return NextResponse.json({ error: 'contextId, widgetType, and either enabled or settings required' }, { status: 400 })
   }
 
   const ctx = await db.query.contexts.findFirst({
@@ -32,10 +33,23 @@ export async function PATCH(req: NextRequest) {
     ),
   })
 
+  const setFields: Record<string, unknown> = {}
+  if (enabled !== undefined) setFields.enabled = enabled
+  if (settings !== undefined) {
+    // Merge with existing settings to avoid wiping unrelated keys (e.g. MantraWidget's text)
+    const existingSettings = (existing?.settings as Record<string, unknown>) ?? {}
+    setFields.settings = { ...existingSettings, ...settings }
+  }
+
   if (existing) {
-    await db.update(widgetConfigs).set({ enabled }).where(eq(widgetConfigs.id, existing.id))
+    await db.update(widgetConfigs).set(setFields).where(eq(widgetConfigs.id, existing.id))
   } else {
-    await db.insert(widgetConfigs).values({ contextId, widgetType, enabled })
+    await db.insert(widgetConfigs).values({
+      contextId,
+      widgetType,
+      enabled: enabled ?? true,
+      settings: settings ?? null,
+    })
   }
 
   return NextResponse.json({ ok: true })

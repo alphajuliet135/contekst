@@ -9,7 +9,7 @@ const priorityOrder = { high: 0, medium: 1, low: 2 } as const
 
 export default async function MicroPage() {
   const session = await auth()
-  if (!session) redirect('/login')
+  if (!session?.user?.id) redirect('/login')
   const userId = session.user.id
 
   const microContexts = await db.query.contexts.findMany({

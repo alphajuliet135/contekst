@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { X, LogOut, Sun, Moon, Monitor } from 'lucide-react'
+import { version } from '../../package.json'
 
 // ── Theme helpers ──────────────────────────────────────────────────────────
 
@@ -347,7 +348,7 @@ export function SettingsPanel({ user, onClose }: Props) {
           <div style={{ borderTop: '0.5px solid hsl(var(--border))', marginBottom: 28 }} />
 
           {/* Session */}
-          <section>
+          <section style={{ marginBottom: 28 }}>
             <SectionLabel>Session</SectionLabel>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
@@ -364,6 +365,16 @@ export function SettingsPanel({ user, onClose }: Props) {
               <LogOut size={14} strokeWidth={1.75} />
               Sign out
             </button>
+          </section>
+
+          <div style={{ borderTop: '0.5px solid hsl(var(--border))', marginBottom: 28 }} />
+
+          {/* About */}
+          <section>
+            <SectionLabel>About</SectionLabel>
+            <span style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))' }}>
+              Contekst v{version}
+            </span>
           </section>
         </div>
       </div>

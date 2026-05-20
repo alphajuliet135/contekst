@@ -26,7 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const dataTheme = theme === 'system' ? undefined : (theme as 'light' | 'dark')
 
   return (
-    <html lang="en" data-theme={dataTheme}>
+    <html lang="en" data-theme={dataTheme} suppressHydrationWarning>
       <body>{children}</body>
     </html>
   )
