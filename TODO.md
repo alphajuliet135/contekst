@@ -8,7 +8,6 @@ This file contains all open todos, which include features and bugs. Once you hav
 ~~All complete~~
 
 ### Medium Effort
-- Single Context -> Prios: have multiple Prio Lists
 - Prios -> Give prios a due date & time and integrate them into the today section of Mission control. Also enable notifications, that also work for PWAs on iOS.
 
 ### Big Effort
@@ -22,13 +21,17 @@ This file contains all open todos, which include features and bugs. Once you hav
 - Top Bar -> Make it possible to change the order of the shown contexts
 
 ## Misc
-- Docs (every time) -> Update docs and CLAUDE.md ✓ (done for v0.2.0)
+- Docs (every time) -> Update docs and CLAUDE.md
 - Logo -> Update and make it look prettier
-- Data & Model -> Give backup and restore option, also maybe store data in a persisted storage folder
-- Backup Options -> If the container ever fails. Maybe JSON or csv export. Whatever works best. Maybe also backup option to a network folder.
+- Data storage -> Persistent storage folder / configurable DB path (Docker volume reliability)
 - Calendar and Todos (Don't do ri) -> Give option to maybe connect to Services like Google Calendar or iCloud
 
 # Completed Todos
+
+### v0.3.0
+- Multiple priority lists per context — named tabs in Priorities widget, Main tab for ungrouped todos, inline create/rename/delete.
+- Backup & restore — export/import JSON from Settings panel.
+- Stability — standardised auth checks, contextId ownership validation, race condition fix, AbortController in modal.
 
 ### v0.2.0
 - Micro Context Page -> Create a peek feature (modal overlay, full widget dashboard, no promotion needed).

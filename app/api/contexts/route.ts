@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
   const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const rows = await db.query.contexts.findMany({
     where: eq(contexts.userId, session.user.id),
@@ -18,7 +18,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const { name, type = 'macro', color = '#378ADD', icon = 'circle' } = body

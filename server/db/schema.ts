@@ -44,19 +44,31 @@ export const widgetConfigs = sqliteTable('widget_configs', {
   uniqContextWidget: uniqueIndex('widget_configs_ctx_type_uniq').on(t.contextId, t.widgetType),
 }))
 
+// --- Todo Lists ---
+
+export const todoLists = sqliteTable('todo_lists', {
+  id:        text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  contextId: text('context_id').notNull().references(() => contexts.id, { onDelete: 'cascade' }),
+  userId:    text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name:      text('name').notNull(),
+  order:     integer('order').notNull().default(0),
+  createdAt: text('created_at').default(sql`(current_timestamp)`),
+})
+
 // --- Todos ---
 
 export const todos = sqliteTable('todos', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  contextId: text('context_id').notNull().references(() => contexts.id, { onDelete: 'cascade' }),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  title: text('title').notNull(),
-  priority: text('priority', { enum: ['high', 'medium', 'low'] }).notNull().default('medium'),
-  dueDate: text('due_date'),
-  done: integer('done', { mode: 'boolean' }).notNull().default(false),
-  pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+  id:          text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  contextId:   text('context_id').notNull().references(() => contexts.id, { onDelete: 'cascade' }),
+  userId:      text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  listId:      text('list_id').references(() => todoLists.id, { onDelete: 'set null' }),
+  title:       text('title').notNull(),
+  priority:    text('priority', { enum: ['high', 'medium', 'low'] }).notNull().default('medium'),
+  dueDate:     text('due_date'),
+  done:        integer('done', { mode: 'boolean' }).notNull().default(false),
+  pinned:      integer('pinned', { mode: 'boolean' }).notNull().default(false),
   completedAt: text('completed_at'),
-  createdAt: text('created_at').default(sql`(current_timestamp)`),
+  createdAt:   text('created_at').default(sql`(current_timestamp)`),
 })
 
 // --- Dates ---

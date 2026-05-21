@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripHorizontal, Maximize2, Minimize2 } from 'lucide-react'
-import type { WidgetType, Todo, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
+import type { WidgetType, Todo, TodoList, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
 import { TodosWidget } from './TodosWidget'
 import { DatesWidget } from './DatesWidget'
 import { NotesWidget } from './NotesWidget'
@@ -106,6 +106,7 @@ interface Props {
   initialEnabled: Record<WidgetType, boolean>
   widgetSettings: Partial<Record<WidgetType, Record<string, unknown>>>
   todos: Todo[]
+  todoLists: TodoList[]
   dates: DateEvent[]
   notes: Note[]
   habits: Habit[]
@@ -121,7 +122,7 @@ export function WidgetDashboard({
   contextId, contextColor,
   orderedEnabledTypes, initialEnabled,
   widgetSettings,
-  todos, dates, notes, habits, todayLogs, links, people, mantraText,
+  todos, todoLists, dates, notes, habits, todayLogs, links, people, mantraText,
 }: Props) {
   const router = useRouter()
   const [order, setOrder] = useState<WidgetType[]>(orderedEnabledTypes)
@@ -173,7 +174,7 @@ export function WidgetDashboard({
   }
 
   function renderWidget(type: WidgetType) {
-    if (type === 'todos')  return <TodosWidget  todos={todos}   color={contextColor} contextId={contextId} />
+    if (type === 'todos')  return <TodosWidget  todos={todos} todoLists={todoLists} color={contextColor} contextId={contextId} />
     if (type === 'dates')  return <DatesWidget  dates={dates}   color={contextColor} contextId={contextId} />
     if (type === 'notes')  return <NotesWidget  notes={notes}   color={contextColor} contextId={contextId} />
     if (type === 'habits') return <HabitsWidget habits={habits} logs={todayLogs} color={contextColor} contextId={contextId} />

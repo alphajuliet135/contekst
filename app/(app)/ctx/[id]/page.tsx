@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import { db } from '@/server/db'
 import {
-  contexts, todos, dates, notes, habits, habitLogs, links, people, widgetConfigs,
+  contexts, todos, todoLists, dates, notes, habits, habitLogs, links, people, widgetConfigs,
 } from '@/server/db/schema'
 import { eq, and, inArray, or, gte } from 'drizzle-orm'
 import type { WidgetType } from '@/lib/types'
@@ -33,6 +33,7 @@ export default async function ContextPage({ params }: Props) {
 
   const [
     ctxTodos,
+    ctxTodoLists,
     ctxDates,
     ctxNotes,
     ctxHabits,
@@ -49,6 +50,10 @@ export default async function ContextPage({ params }: Props) {
           and(eq(todos.done, true), gte(todos.completedAt, cutoff)),
         ),
       ),
+    }),
+    db.query.todoLists.findMany({
+      where: and(eq(todoLists.contextId, id), eq(todoLists.userId, userId)),
+      orderBy: (l, { asc }) => [asc(l.order)],
     }),
     db.query.dates.findMany({
       where: and(eq(dates.contextId, id), eq(dates.userId, userId)),
@@ -148,6 +153,7 @@ export default async function ContextPage({ params }: Props) {
         initialEnabled={initialEnabled}
         widgetSettings={widgetSettings}
         todos={ctxTodos}
+        todoLists={ctxTodoLists}
         dates={ctxDates}
         notes={ctxNotes}
         habits={ctxHabits}

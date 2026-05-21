@@ -70,12 +70,13 @@ export function MicroCard({ ctx, initialTodos, initialDates, today }: Props) {
       done: false, pinned: false,
       completedAt: null, createdAt: null,
     }])
-    setShowForm(false); setNewTitle(''); setNewPriority('medium'); setSubmitting(false)
+    setShowForm(false); setNewTitle(''); setNewPriority('medium')
     await fetch('/api/todos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contextId: ctx.id, title, priority: newPriority }),
     })
+    setSubmitting(false)
     router.refresh()
   }
 

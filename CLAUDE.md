@@ -57,7 +57,7 @@ All contexts share the same widget set. Each context independently controls whic
 
 | Widget (display name) | Internal type | Description |
 |-----------------------|---------------|-------------|
-| Priorities | `todos` | Task list with priority levels (high / medium / low); inline editing, click-to-open priority picker |
+| Priorities | `todos` | Task list with priority levels (high / medium / low); inline editing, click-to-open priority picker; optional named sub-lists per context (tab bar) |
 | Upcoming dates | `dates` | Important upcoming dates with coloured date boxes |
 | Notes | `notes` | Freeform notes with optional titles; inline editing |
 | Habits | `habits` | Recurring daily/weekly check-ins |
@@ -138,6 +138,8 @@ Dark, minimal, confident. Near-black backgrounds with context-colour accents. Ro
 - [x] Top bar navigation
 - [x] Dark mode UI
 - [x] Inline item creation and editing from UI (todos, notes, habits, links, people)
+- [x] Multiple priority lists per context (named tab bar)
+- [x] Backup & restore (JSON export/import from Settings)
 
 ### Out of scope for V1
 - Mobile app

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { WidgetDashboard } from '@/components/widgets/WidgetDashboard'
-import type { WidgetType, Todo, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
+import type { WidgetType, Todo, TodoList, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
 
 interface DashboardData {
   contextId: string
@@ -12,6 +12,7 @@ interface DashboardData {
   initialEnabled: Record<WidgetType, boolean>
   widgetSettings: Partial<Record<WidgetType, Record<string, unknown>>>
   todos: Todo[]
+  todoLists: TodoList[]
   dates: DateEvent[]
   notes: Note[]
   habits: Habit[]
@@ -34,13 +35,18 @@ export function MicroContextModal({ contextId, contextName, contextColor, onClos
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/contexts/${contextId}/dashboard`)
+    const controller = new AbortController()
+    fetch(`/api/contexts/${contextId}/dashboard`, { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error('Failed')
         return res.json()
       })
       .then((d: DashboardData) => { setData(d); setLoading(false) })
-      .catch(() => { setError(true); setLoading(false) })
+      .catch(err => {
+        if (err.name === 'AbortError') return
+        setError(true); setLoading(false)
+      })
+    return () => controller.abort()
   }, [contextId])
 
   useEffect(() => {
@@ -116,6 +122,7 @@ export function MicroContextModal({ contextId, contextName, contextColor, onClos
               initialEnabled={data.initialEnabled}
               widgetSettings={data.widgetSettings}
               todos={data.todos}
+              todoLists={data.todoLists}
               dates={data.dates}
               notes={data.notes}
               habits={data.habits}
