@@ -9,6 +9,7 @@ This file contains all open todos, which include features and bugs. Once you hav
 
 ### Medium Effort
 - Single Context -> Prios: have multiple Prio Lists
+- Prios -> Give prios a due date & time and integrate them into the today section of Mission control. Also enable notifications, that also work for PWAs on iOS.
 
 ### Big Effort
 - Overall app (Needs to be refined) -> Transform project into a expo project

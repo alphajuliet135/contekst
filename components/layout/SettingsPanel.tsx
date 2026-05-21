@@ -138,6 +138,59 @@ export function SettingsPanel({ user, onClose }: Props) {
   const [nameLoading, setNameLoading] = useState(false)
   const [nameMsg, setNameMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
+  // Backup / restore
+  const [backupLoading, setBackupLoading]   = useState(false)
+  const [lastBackup, setLastBackup]         = useState<string | null>(null)
+  const [restoreFile, setRestoreFile]       = useState<File | null>(null)
+  const [restoreConfirm, setRestoreConfirm] = useState(false)
+  const [restoreLoading, setRestoreLoading] = useState(false)
+  const [restoreMsg, setRestoreMsg]         = useState<{ text: string; ok: boolean } | null>(null)
+
+  useEffect(() => {
+    setLastBackup(localStorage.getItem('contekst_last_backup'))
+  }, [])
+
+  async function downloadBackup() {
+    setBackupLoading(true)
+    const res = await fetch('/api/backup')
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `contekst-backup-${new Date().toISOString().split('T')[0]}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    const now = new Date().toISOString()
+    localStorage.setItem('contekst_last_backup', now)
+    setLastBackup(now)
+    setBackupLoading(false)
+  }
+
+  async function runRestore() {
+    if (!restoreFile) return
+    setRestoreLoading(true)
+    setRestoreMsg(null)
+    const text = await restoreFile.text()
+    let parsed
+    try { parsed = JSON.parse(text) }
+    catch { setRestoreMsg({ text: 'Invalid JSON file', ok: false }); setRestoreLoading(false); return }
+    const res = await fetch('/api/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parsed),
+    })
+    setRestoreLoading(false)
+    if (res.ok) {
+      setRestoreMsg({ text: 'Restored — reloading…', ok: true })
+      setRestoreConfirm(false)
+      setRestoreFile(null)
+      setTimeout(() => window.location.reload(), 1200)
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setRestoreMsg({ text: (data as { error?: string }).error ?? 'Restore failed', ok: false })
+    }
+  }
+
   // Password
   const [currentPw, setCurrentPw]   = useState('')
   const [newPw, setNewPw]           = useState('')
@@ -343,6 +396,100 @@ export function SettingsPanel({ user, onClose }: Props) {
                 Update password
               </SaveButton>
             </div>
+          </section>
+
+          <div style={{ borderTop: '0.5px solid hsl(var(--border))', marginBottom: 28 }} />
+
+          {/* Data — backup & restore */}
+          <section style={{ marginBottom: 28 }}>
+            <SectionLabel>Data</SectionLabel>
+            <p style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', margin: '0 0 10px' }}>
+              Download a full backup of your contexts, tasks, notes, and all other data.
+            </p>
+            <button
+              onClick={downloadBackup}
+              disabled={backupLoading}
+              style={{
+                padding: '7px 14px', borderRadius: 7,
+                border: '0.5px solid hsl(var(--border))',
+                background: 'transparent', color: 'hsl(var(--foreground))',
+                fontSize: 12, fontWeight: 500,
+                cursor: backupLoading ? 'default' : 'pointer',
+                opacity: backupLoading ? 0.6 : 1, marginBottom: 20,
+              }}
+            >
+              {backupLoading ? 'Preparing…' : 'Export backup'}
+            </button>
+            <p style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))', margin: '-14px 0 20px', opacity: 0.7 }}>
+              {lastBackup
+                ? `Last backup: ${new Date(lastBackup).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, ${new Date(lastBackup).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                : 'Never backed up on this device'}
+            </p>
+
+            <p style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', margin: '0 0 8px' }}>
+              Restore from a backup file.{' '}
+              <strong style={{ color: '#d95f5f' }}>This replaces all current data.</strong>
+            </p>
+            <label style={{
+              display: 'inline-block', padding: '7px 14px', borderRadius: 7,
+              border: '0.5px solid hsl(var(--border))', background: 'transparent',
+              color: 'hsl(var(--muted-foreground))', fontSize: 12, cursor: 'pointer', marginBottom: 8,
+            }}>
+              {restoreFile ? restoreFile.name : 'Choose backup file…'}
+              <input
+                type="file" accept=".json" style={{ display: 'none' }}
+                onChange={e => {
+                  setRestoreFile(e.target.files?.[0] ?? null)
+                  setRestoreConfirm(false)
+                  setRestoreMsg(null)
+                }}
+              />
+            </label>
+
+            {restoreFile && !restoreConfirm && (
+              <div style={{ marginTop: 8 }}>
+                <button
+                  onClick={() => setRestoreConfirm(true)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 7, border: 'none',
+                    background: 'rgba(217, 95, 95, 0.15)', color: '#d95f5f',
+                    fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  Restore — replace all data
+                </button>
+              </div>
+            )}
+
+            {restoreConfirm && (
+              <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  onClick={runRestore}
+                  disabled={restoreLoading}
+                  style={{
+                    padding: '6px 12px', borderRadius: 7, border: 'none',
+                    background: '#d95f5f', color: 'white',
+                    fontSize: 12, fontWeight: 500,
+                    cursor: restoreLoading ? 'default' : 'pointer',
+                    opacity: restoreLoading ? 0.6 : 1,
+                  }}
+                >
+                  {restoreLoading ? 'Restoring…' : 'Yes, replace all data'}
+                </button>
+                <button
+                  onClick={() => { setRestoreConfirm(false); setRestoreFile(null) }}
+                  style={{ background: 'none', border: 'none', fontSize: 12, color: 'hsl(var(--muted-foreground))', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {restoreMsg && (
+              <p style={{ fontSize: 12, color: restoreMsg.ok ? '#3DA05E' : '#d95f5f', marginTop: 8, marginBottom: 0 }}>
+                {restoreMsg.text}
+              </p>
+            )}
           </section>
 
           <div style={{ borderTop: '0.5px solid hsl(var(--border))', marginBottom: 28 }} />
