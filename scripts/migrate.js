@@ -36,12 +36,19 @@ for (const entry of journal.entries) {
   const statements = sql.split('--> statement-breakpoint').map(s => s.trim()).filter(Boolean)
 
   console.log(`Applying migration: ${entry.tag}`)
-  db.transaction(() => {
-    for (const statement of statements) {
+  for (const statement of statements) {
+    try {
       db.exec(statement)
+    } catch (err) {
+      const msg = (err && err.message) || ''
+      // Tolerate schema changes already applied by a previous deployment
+      if (msg.includes('already exists') || msg.includes('duplicate column name')) {
+        continue
+      }
+      throw err
     }
-    db.prepare('INSERT INTO __migrations (tag) VALUES (?)').run(entry.tag)
-  })()
+  }
+  db.prepare('INSERT INTO __migrations (tag) VALUES (?)').run(entry.tag)
 }
 
 console.log('Migrations complete.')
