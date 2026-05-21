@@ -4,6 +4,43 @@ All notable changes to Contekst are documented here.
 
 ---
 
+## [0.3.0] — 2026-05-21
+
+### Added
+
+- **Multiple priority lists per context** — create named sub-lists within the Priorities widget; tab bar shows Main (ungrouped todos) + named lists; single-click to switch, double-click to rename inline, hover × to delete; lists persist per context in the database
+- **Backup & restore** — export a full JSON backup of all contexts, todos, notes, habits, dates, links, people, and widget settings from the Settings panel; restore from a backup file with two-step confirmation; last backup timestamp shown per browser
+
+### Changed
+
+- `todo-lists/[id]` PATCH now whitelists only the `name` field (prevents body-injection of `userId`/`contextId`)
+
+### Fixed
+
+- Standardised auth checks to `session?.user?.id` across all API routes (prevents crash if JWT exists but `user.id` is undefined)
+- Added contextId ownership check to `POST /api/todos` (a user could previously create todos in contexts they don't own)
+- Fixed race condition in `handleAdd` (TodosWidget, MicroCard) — `submitting` flag is now reset after the fetch completes, preventing duplicate todos on rapid clicks
+- Added AbortController to MicroContextModal data fetch — prevents setState on unmounted component if the modal closes while loading
+
+---
+
+## [0.2.2] — 2026-05-21
+
+### Fixed
+
+- Ghost session detection in app layout — calls `signOut` when a valid JWT references a user that no longer exists in the database
+- Skip runtime migration runner when Docker `scripts/migrate.js` has already run — prevents double-applying all migrations on every container start
+
+---
+
+## [0.2.1] — 2026-05-20
+
+### Fixed
+
+- Replaced Drizzle's built-in `migrate()` with a fault-tolerant `runMigrations()` — handles existing databases without a `__drizzle_migrations` tracking table; tolerates "already exists" and "duplicate column" errors per statement
+
+---
+
 ## [0.2.0] — 2026-05-20
 
 ### Added

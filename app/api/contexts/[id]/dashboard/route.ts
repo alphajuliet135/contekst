@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
-import { contexts, todos, dates, notes, habits, habitLogs, links, people, widgetConfigs } from '@/server/db/schema'
+import { contexts, todos, todoLists, dates, notes, habits, habitLogs, links, people, widgetConfigs } from '@/server/db/schema'
 import { eq, and, inArray, or, gte } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 import type { WidgetType } from '@/lib/types'
@@ -22,7 +22,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const today = new Date().toISOString().split('T')[0]
   const cutoff = new Date(Date.now() - 7 * 86400000).toISOString()
 
-  const [ctxTodos, ctxDates, ctxNotes, ctxHabits, ctxLinks, ctxPeople, configs] = await Promise.all([
+  const [ctxTodos, ctxTodoLists, ctxDates, ctxNotes, ctxHabits, ctxLinks, ctxPeople, configs] = await Promise.all([
     db.query.todos.findMany({
       where: and(
         eq(todos.contextId, id),
@@ -32,6 +32,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           and(eq(todos.done, true), gte(todos.completedAt, cutoff)),
         ),
       ),
+    }),
+    db.query.todoLists.findMany({
+      where: and(eq(todoLists.contextId, id), eq(todoLists.userId, userId)),
+      orderBy: (l, { asc }) => [asc(l.order)],
     }),
     db.query.dates.findMany({
       where: and(eq(dates.contextId, id), eq(dates.userId, userId)),
@@ -91,6 +95,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     initialEnabled,
     widgetSettings,
     todos: ctxTodos,
+    todoLists: ctxTodoLists,
     dates: ctxDates,
     notes: ctxNotes,
     habits: ctxHabits,

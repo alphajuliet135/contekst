@@ -7,8 +7,9 @@ A self-hosted life-organisation app. Each area of your life gets its own context
 - **Mission Control** — smart home view with a **Today** section (cross-context todos due today / overdue / high-priority, sortable by Priority, Context, or Due date), per-context attention cards, aggregated Upcoming dates, pinned items, and a Micro sidebar
 - **Macro dashboards** — full-page dashboard per context with seven widgets: Priorities, Upcoming dates, Notes, Habits, Links, People, Mantra; drag-to-reorder and resize widgets; toggle visibility via Edit Layout mode
 - **Micro hub** — compact card grid; peek into any Micro context's full widget dashboard via modal without promoting it
-- **Priorities widget** — inline todo creation and editing; click-to-open priority picker (no list-jumping); mark done with optimistic UI
+- **Priorities widget** — inline todo creation and editing; optional named sub-lists per context (tab bar); click-to-open priority picker; mark done with optimistic UI
 - **Notes widget** — freeform notes with optional titles; inline editing
+- **Backup & restore** — export a full JSON backup from Settings; restore replaces all current data with two-step confirmation; last-backup timestamp tracked per browser
 - **Promote / demote** — move any context between Macro and Micro at any time
 - **First-run setup** — signup page on first launch, no seed scripts or manual DB inserts needed
 - **Self-hosted** — single SQLite file, Docker multi-arch image (`amd64` + `arm64`), no external services required

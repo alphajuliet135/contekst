@@ -1,6 +1,15 @@
 export type ContextType = 'macro' | 'micro'
 export type Priority = 'high' | 'medium' | 'low'
 export type WidgetType = 'todos' | 'dates' | 'notes' | 'habits' | 'links' | 'people' | 'mantra'
+
+export interface TodoList {
+  id: string
+  contextId: string
+  userId: string
+  name: string
+  order: number
+  createdAt: string | null
+}
 export type Frequency = 'daily' | 'weekly'
 
 export interface Context {
@@ -28,6 +37,7 @@ export interface Todo {
   id: string
   contextId: string
   userId: string
+  listId?: string | null
   title: string
   priority: Priority
   dueDate?: string | null

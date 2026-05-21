@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/server/db'
-import { contexts, widgetConfigs, todos, dates, notes, habits, habitLogs, links, people } from '@/server/db/schema'
+import { contexts, widgetConfigs, todoLists, todos, dates, notes, habits, habitLogs, links, people } from '@/server/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import { version } from '../../../package.json'
@@ -13,9 +13,10 @@ export async function GET() {
   const ctxRows = await db.query.contexts.findMany({ where: eq(contexts.userId, userId) })
   const ctxIds  = ctxRows.map(c => c.id)
 
-  const [wc, td, dt, nt, hb, lk, pp] = ctxIds.length > 0
+  const [wc, tl, td, dt, nt, hb, lk, pp] = ctxIds.length > 0
     ? await Promise.all([
         db.query.widgetConfigs.findMany({ where: inArray(widgetConfigs.contextId, ctxIds) }),
+        db.query.todoLists.findMany({ where: eq(todoLists.userId, userId) }),
         db.query.todos.findMany({ where: eq(todos.userId, userId) }),
         db.query.dates.findMany({ where: eq(dates.userId, userId) }),
         db.query.notes.findMany({ where: eq(notes.userId, userId) }),
@@ -23,7 +24,7 @@ export async function GET() {
         db.query.links.findMany({ where: eq(links.userId, userId) }),
         db.query.people.findMany({ where: eq(people.userId, userId) }),
       ])
-    : [[], [], [], [], [], [], []]
+    : [[], [], [], [], [], [], [], []]
 
   const habitIds = (hb as { id: string }[]).map(h => h.id)
   const hl = habitIds.length > 0
@@ -36,6 +37,7 @@ export async function GET() {
     appVersion: version,
     contexts: ctxRows,
     widgetConfigs: wc,
+    todoLists: tl,
     todos: td,
     dates: dt,
     notes: nt,

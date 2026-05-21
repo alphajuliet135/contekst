@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, Plus, Check, Trash2 } from 'lucide-react'
-import type { Todo, Priority } from '@/lib/types'
+import { CheckSquare, Plus, Check, Trash2, X } from 'lucide-react'
+import type { Todo, TodoList, Priority } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 
-// ── Badge styles (reused for priority selector in add form) ───────────────────
+// ── Badge styles ──────────────────────────────────────────────────────────────
 
 const BADGE_BASE: React.CSSProperties = {
   borderRadius: 5, padding: '1px 7px', fontSize: 11, fontWeight: 500,
@@ -25,66 +25,88 @@ const priorityOrder: Record<Priority, number> = { high: 0, medium: 1, low: 2 }
 
 interface Props {
   todos: Todo[]
+  todoLists: TodoList[]
   color: string
   contextId: string
 }
 
-export function TodosWidget({ todos, color, contextId }: Props) {
+export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
   const router = useRouter()
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef      = useRef<HTMLInputElement>(null)
+  const editInputRef  = useRef<HTMLInputElement>(null)
+  const listNameInputRef = useRef<HTMLInputElement>(null)
+  const newListInputRef  = useRef<HTMLInputElement>(null)
+
+  // ── Todo state ──────────────────────────────────────────────────────────────
 
   const [items, setItems]             = useState<Todo[]>(todos)
   const [showForm, setShowForm]       = useState(false)
   const [newTitle, setNewTitle]       = useState('')
   const [newPriority, setNewPriority] = useState<Priority>('medium')
   const [submitting, setSubmitting]   = useState(false)
-  const [editingTodoId, setEditingTodoId]     = useState<string | null>(null)
-  const [draftTitle, setDraftTitle]           = useState('')
-  const editInputRef                          = useRef<HTMLInputElement>(null)
+  const [editingTodoId, setEditingTodoId]         = useState<string | null>(null)
+  const [draftTitle, setDraftTitle]               = useState('')
+  const editRef                                   = useRef<HTMLInputElement>(null)
   const [editingPriorityId, setEditingPriorityId] = useState<string | null>(null)
 
-  // Sync with server after router.refresh()
+  // ── List state ──────────────────────────────────────────────────────────────
+
+  const [lists, setLists]                   = useState<TodoList[]>(todoLists)
+  const [activeListId, setActiveListId]     = useState<string | null>(null)
+  const [editingListId, setEditingListId]   = useState<string | null>(null)
+  const [draftListName, setDraftListName]   = useState('')
+  const [addingList, setAddingList]         = useState(false)
+  const [newListName, setNewListName]       = useState('')
+
   useEffect(() => { setItems(todos) }, [todos])
+  useEffect(() => { setLists(todoLists) }, [todoLists])
+  useEffect(() => { if (showForm) inputRef.current?.focus() }, [showForm])
+  useEffect(() => { if (editingTodoId) editInputRef.current?.focus() }, [editingTodoId])
+  useEffect(() => { if (addingList) newListInputRef.current?.focus() }, [addingList])
+  useEffect(() => { if (editingListId) listNameInputRef.current?.focus() }, [editingListId])
 
-  // Auto-focus the input when the form opens
-  useEffect(() => {
-    if (showForm) inputRef.current?.focus()
-  }, [showForm])
-
-  // Auto-focus edit input when a todo enters edit mode
-  useEffect(() => {
-    if (editingTodoId) editInputRef.current?.focus()
-  }, [editingTodoId])
-
-  // Close priority picker when clicking outside
   useEffect(() => {
     if (!editingPriorityId) return
     function onMouseDown(e: MouseEvent) {
-      if (!(e.target as Element).closest('[data-prio-picker]')) {
-        setEditingPriorityId(null)
-      }
+      if (!(e.target as Element).closest('[data-prio-picker]')) setEditingPriorityId(null)
     }
     document.addEventListener('mousedown', onMouseDown)
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [editingPriorityId])
 
-  // ── Toggle done ─────────────────────────────────────────────────────────────
+  // ── Visible items ────────────────────────────────────────────────────────────
+
+  const visibleItems = activeListId === null
+    ? items.filter(t => t.listId == null)
+    : items.filter(t => t.listId === activeListId)
+
+  const activeItems = visibleItems
+    .filter(t => !t.done)
+    .sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+      return priorityOrder[a.priority] - priorityOrder[b.priority]
+    })
+
+  const doneItems = visibleItems
+    .filter(t => t.done)
+    .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
+
+  const activeCount = items.filter(t => !t.done).length
+  const hasItems    = visibleItems.length > 0
+  const today       = new Date().toISOString().split('T')[0]
+
+  // ── Todo actions ─────────────────────────────────────────────────────────────
 
   async function toggleDone(todo: Todo) {
     const nowDone = !todo.done
     const completedAt = nowDone ? new Date().toISOString() : null
-    setItems(prev => prev.map(t =>
-      t.id === todo.id ? { ...t, done: nowDone, completedAt } : t
-    ))
+    setItems(prev => prev.map(t => t.id === todo.id ? { ...t, done: nowDone, completedAt } : t))
     await fetch(`/api/todos/${todo.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ done: nowDone, completedAt }),
     })
     router.refresh()
   }
-
-  // ── Delete task ─────────────────────────────────────────────────────────────
 
   async function deleteTodo(e: React.MouseEvent, id: string) {
     e.stopPropagation()
@@ -95,16 +117,14 @@ export function TodosWidget({ todos, color, contextId }: Props) {
     }
   }
 
-  // ── Add task ────────────────────────────────────────────────────────────────
-
   async function handleAdd() {
     const title = newTitle.trim()
     if (!title || submitting) return
     setSubmitting(true)
-
     const tempId = `temp-${Date.now()}`
     setItems(prev => [...prev, {
       id: tempId, contextId, userId: '',
+      listId: activeListId,
       title, priority: newPriority,
       done: false, pinned: false,
       completedAt: null, createdAt: null,
@@ -112,13 +132,11 @@ export function TodosWidget({ todos, color, contextId }: Props) {
     setShowForm(false)
     setNewTitle('')
     setNewPriority('medium')
-    setSubmitting(false)
-
     await fetch('/api/todos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contextId, title, priority: newPriority }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contextId, title, priority: newPriority, listId: activeListId }),
     })
+    setSubmitting(false)
     router.refresh()
   }
 
@@ -126,8 +144,6 @@ export function TodosWidget({ todos, color, contextId }: Props) {
     if (e.key === 'Enter') handleAdd()
     if (e.key === 'Escape') { setShowForm(false); setNewTitle(''); setNewPriority('medium') }
   }
-
-  // ── Inline title editing ────────────────────────────────────────────────────
 
   function startEditingTodo(todo: Todo) {
     setEditingTodoId(todo.id)
@@ -142,8 +158,7 @@ export function TodosWidget({ todos, color, contextId }: Props) {
     if (!title || title === items.find(t => t.id === id)?.title) return
     setItems(prev => prev.map(t => t.id === id ? { ...t, title } : t))
     await fetch(`/api/todos/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title }),
     })
     router.refresh()
@@ -159,28 +174,49 @@ export function TodosWidget({ todos, color, contextId }: Props) {
     if (p === todo.priority) return
     setItems(prev => prev.map(t => t.id === todo.id ? { ...t, priority: p } : t))
     await fetch(`/api/todos/${todo.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ priority: p }),
     })
   }
 
-  // ── Sorted lists ────────────────────────────────────────────────────────────
+  // ── List actions ─────────────────────────────────────────────────────────────
 
-  const activeItems = items
-    .filter(t => !t.done)
-    .sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-      return priorityOrder[a.priority] - priorityOrder[b.priority]
+  async function handleCreateList() {
+    const name = newListName.trim()
+    setAddingList(false)
+    setNewListName('')
+    if (!name) return
+    const res = await fetch('/api/todo-lists', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contextId, name }),
     })
+    const newList: TodoList = await res.json()
+    setLists(prev => [...prev, newList])
+    setActiveListId(newList.id)
+    router.refresh()
+  }
 
-  const doneItems = items
-    .filter(t => t.done)
-    .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
+  async function handleRenameList() {
+    if (!editingListId) return
+    const id = editingListId
+    const name = draftListName.trim()
+    setEditingListId(null)
+    if (!name || name === lists.find(l => l.id === id)?.name) return
+    setLists(prev => prev.map(l => l.id === id ? { ...l, name } : l))
+    await fetch(`/api/todo-lists/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    router.refresh()
+  }
 
-  const activeCount = activeItems.length
-  const hasItems = items.length > 0
-  const today = new Date().toISOString().split('T')[0]
+  async function handleDeleteList(id: string) {
+    setLists(prev => prev.filter(l => l.id !== id))
+    if (activeListId === id) setActiveListId(null)
+    setItems(prev => prev.map(t => t.listId === id ? { ...t, listId: null } : t))
+    await fetch(`/api/todo-lists/${id}`, { method: 'DELETE' })
+    router.refresh()
+  }
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -194,7 +230,7 @@ export function TodosWidget({ todos, color, contextId }: Props) {
       {/* Header */}
       <div style={{
         padding: '12px 16px',
-        borderBottom: '0.5px solid hsl(var(--border))',
+        borderBottom: lists.length > 0 ? 'none' : '0.5px solid hsl(var(--border))',
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <CheckSquare size={14} strokeWidth={1.5} style={{ color }} />
@@ -202,44 +238,175 @@ export function TodosWidget({ todos, color, contextId }: Props) {
         {activeCount > 0 && (
           <span style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))' }}>{activeCount}</span>
         )}
-        <button
-          onClick={() => setShowForm(v => !v)}
-          style={{
-            marginLeft: 'auto', background: 'none', border: 'none',
-            color: showForm ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
-            fontSize: 12, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 3, padding: '2px 4px',
-          }}
-        >
-          <Plus size={11} strokeWidth={2} />
-          Add
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+          {lists.length === 0 && !addingList && (
+            <button
+              onClick={() => setAddingList(true)}
+              style={{
+                background: 'none', border: 'none',
+                color: 'hsl(var(--muted-foreground))', fontSize: 11, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 2, padding: '2px 6px', opacity: 0.6,
+              }}
+              title="Create a named list"
+            >
+              <Plus size={9} strokeWidth={2} />
+              list
+            </button>
+          )}
+          {lists.length === 0 && addingList && (
+            <input
+              ref={newListInputRef}
+              value={newListName}
+              onChange={e => setNewListName(e.target.value)}
+              onBlur={() => { if (!newListName.trim()) { setAddingList(false); setNewListName('') } }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleCreateList()
+                if (e.key === 'Escape') { setAddingList(false); setNewListName('') }
+              }}
+              placeholder="List name…"
+              style={{
+                background: 'none', border: 'none', outline: 'none',
+                fontSize: 12, color: 'hsl(var(--foreground))',
+                width: 90, fontFamily: 'inherit', padding: '2px 0',
+              }}
+            />
+          )}
+          <button
+            onClick={() => setShowForm(v => !v)}
+            style={{
+              background: 'none', border: 'none',
+              color: showForm ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+              fontSize: 12, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 3, padding: '2px 4px',
+            }}
+          >
+            <Plus size={11} strokeWidth={2} />
+            Add
+          </button>
+        </div>
       </div>
+
+      {/* Tab bar */}
+      {lists.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', padding: '0 8px',
+          borderBottom: '0.5px solid hsl(var(--border))',
+          overflowX: 'auto', scrollbarWidth: 'none',
+        }}>
+          <button
+            onClick={() => setActiveListId(null)}
+            style={{
+              flexShrink: 0, padding: '7px 8px', background: 'none', border: 'none',
+              fontSize: 12, fontWeight: activeListId === null ? 500 : 400, cursor: 'pointer',
+              color: activeListId === null ? color : 'hsl(var(--muted-foreground))',
+              borderBottom: activeListId === null ? `2px solid ${color}` : '2px solid transparent',
+              marginBottom: -1,
+            }}
+          >
+            Main
+          </button>
+          {lists.map(list => (
+            <div key={list.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+              {editingListId === list.id ? (
+                <input
+                  ref={listNameInputRef}
+                  value={draftListName}
+                  onChange={e => setDraftListName(e.target.value)}
+                  onBlur={handleRenameList}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') e.currentTarget.blur()
+                    if (e.key === 'Escape') setEditingListId(null)
+                  }}
+                  style={{
+                    background: 'none', border: 'none', outline: 'none',
+                    fontSize: 12, color: 'hsl(var(--foreground))',
+                    padding: '7px 4px', marginBottom: -1,
+                    width: Math.max(60, draftListName.length * 8),
+                    fontFamily: 'inherit',
+                  }}
+                />
+              ) : (
+                <button
+                  onClick={() => setActiveListId(list.id)}
+                  onDoubleClick={() => { setEditingListId(list.id); setDraftListName(list.name) }}
+                  style={{
+                    padding: '7px 4px 7px 8px', background: 'none', border: 'none',
+                    fontSize: 12, fontWeight: activeListId === list.id ? 500 : 400, cursor: 'pointer',
+                    color: activeListId === list.id ? color : 'hsl(var(--muted-foreground))',
+                    borderBottom: activeListId === list.id ? `2px solid ${color}` : '2px solid transparent',
+                    marginBottom: -1, display: 'flex', alignItems: 'center', gap: 3,
+                  }}
+                >
+                  {list.name}
+                  <span
+                    onMouseDown={e => { e.stopPropagation(); handleDeleteList(list.id) }}
+                    style={{ display: 'flex', alignItems: 'center', color: 'hsl(var(--muted-foreground))', opacity: 0.4, cursor: 'pointer' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '0.4'}
+                  >
+                    <X size={9} strokeWidth={2} />
+                  </span>
+                </button>
+              )}
+            </div>
+          ))}
+          {addingList ? (
+            <input
+              ref={newListInputRef}
+              value={newListName}
+              onChange={e => setNewListName(e.target.value)}
+              onBlur={() => { if (!newListName.trim()) { setAddingList(false); setNewListName('') } }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleCreateList()
+                if (e.key === 'Escape') { setAddingList(false); setNewListName('') }
+              }}
+              placeholder="List name…"
+              style={{
+                background: 'none', border: 'none', outline: 'none',
+                fontSize: 12, color: 'hsl(var(--foreground))',
+                padding: '7px 4px', width: 90, fontFamily: 'inherit',
+              }}
+            />
+          ) : (
+            <button
+              onClick={() => setAddingList(true)}
+              style={{
+                padding: '7px 6px', background: 'none', border: 'none',
+                cursor: 'pointer', color: 'hsl(var(--muted-foreground))',
+                display: 'flex', alignItems: 'center', opacity: 0.5, marginLeft: 2,
+              }}
+              onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.opacity = '1'}
+              onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.opacity = '0.5'}
+              title="New list"
+            >
+              <Plus size={11} strokeWidth={2} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Body */}
       {!hasItems && !showForm ? (
         <div style={{ padding: '14px 16px' }}>
           <span style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))' }}>
-            No priorities yet — click Add to create one
+            {activeListId === null
+              ? 'No priorities yet — click Add to create one'
+              : `No items in "${lists.find(l => l.id === activeListId)?.name ?? 'this list'}" — click Add`}
           </span>
         </div>
       ) : (
         <div style={{ paddingBottom: showForm ? 0 : 6 }}>
-          {/* Active tasks */}
           {activeItems.map(todo => (
             <div key={todo.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '7px 16px' }}>
-              {/* Checkbox */}
               <span
                 onClick={() => toggleDone(todo)}
                 style={{
                   width: 16, height: 16, borderRadius: '50%',
                   border: '1.5px solid hsl(var(--border))',
-                  flexShrink: 0, marginTop: 1,
-                  cursor: 'pointer',
+                  flexShrink: 0, marginTop: 1, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               />
-              {/* Title + due date */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 {editingTodoId === todo.id ? (
                   <input
@@ -273,7 +440,6 @@ export function TodosWidget({ todos, color, contextId }: Props) {
                   </span>
                 )}
               </div>
-              {/* Priority badge / inline picker */}
               {editingPriorityId === todo.id ? (
                 <div data-prio-picker style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
                   {(['high', 'medium', 'low'] as Priority[]).map(p => (
@@ -301,7 +467,6 @@ export function TodosWidget({ todos, color, contextId }: Props) {
                   {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Med' : 'Low'}
                 </button>
               )}
-              {/* Delete */}
               <button
                 onClick={e => deleteTodo(e, todo.id)}
                 style={{
@@ -317,7 +482,6 @@ export function TodosWidget({ todos, color, contextId }: Props) {
             </div>
           ))}
 
-          {/* Done tasks */}
           {doneItems.length > 0 && (
             <>
               {activeItems.length > 0 && (
@@ -325,13 +489,11 @@ export function TodosWidget({ todos, color, contextId }: Props) {
               )}
               {doneItems.map(todo => (
                 <div key={todo.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 16px' }}>
-                  {/* Filled checkbox */}
                   <span
                     onClick={() => toggleDone(todo)}
                     style={{
                       width: 16, height: 16, borderRadius: '50%',
-                      background: color, flexShrink: 0, marginTop: 1,
-                      cursor: 'pointer',
+                      background: color, flexShrink: 0, marginTop: 1, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
@@ -340,8 +502,7 @@ export function TodosWidget({ todos, color, contextId }: Props) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{
                       fontSize: 13, lineHeight: 1.4, display: 'block',
-                      textDecoration: 'line-through',
-                      color: 'hsl(var(--muted-foreground))',
+                      textDecoration: 'line-through', color: 'hsl(var(--muted-foreground))',
                     }}>
                       {todo.title}
                     </span>
@@ -364,7 +525,6 @@ export function TodosWidget({ todos, color, contextId }: Props) {
             </>
           )}
 
-          {/* Inline add form */}
           {showForm && (
             <div style={{
               padding: '10px 16px 12px',
@@ -385,7 +545,6 @@ export function TodosWidget({ todos, color, contextId }: Props) {
                 }}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                {/* Priority selector */}
                 <div style={{ display: 'flex', gap: 4 }}>
                   {(['high', 'medium', 'low'] as Priority[]).map(p => {
                     const selected = newPriority === p
@@ -409,7 +568,6 @@ export function TodosWidget({ todos, color, contextId }: Props) {
                     )
                   })}
                 </div>
-                {/* Actions */}
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button
                     type="button"
