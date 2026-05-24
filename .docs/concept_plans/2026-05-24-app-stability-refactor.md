@@ -118,17 +118,64 @@ The app works, but it was built feature-first. Now that the scope is settled, th
 
 ---
 
+### CI/CD improvements
+
+The current release workflow is a single file that bundles versioning, tag creation, and Docker builds. It uses GitHub's default `generate_release_notes: true`, which produces a flat commit list — not very readable.
+
+**Planned changes:**
+
+#### Switch to Release Please
+Replace the manual version-from-`package.json` approach with `googleapis/release-please-action@v4` (the same tool used by the j3tsetr reference project). Release Please:
+- Reads conventional commits and determines the next version automatically (`feat:` → minor, `fix:` → patch, `feat!:` → major)
+- Opens a PR that bumps `package.json` version and generates a structured `CHANGELOG.md` grouped by commit type
+- Publishes the GitHub Release when that PR is merged
+
+This replaces the current `softprops/action-gh-release` step entirely.
+
+#### Separate Docker build workflow
+Move the multi-arch Docker build (amd64 + arm64) out of `release.yml` into a new `docker.yml` that triggers on `on: release: types: [published]`. The build logic stays identical — only the trigger and the version-reading mechanism change (version comes from `github.event.release.tag_name` instead of a `jq` step).
+
+#### Branch protection
+Set `main` and `develop` as protected branches via `gh api`:
+- No direct pushes — PRs required
+- Deletion forbidden
+- One-time setup, not a workflow file
+
+#### `/release` Claude Code skill
+Create `.claude/commands/release.md` — a markdown prompt file that becomes available as `/release` inside Claude Code. It guides the full release process:
+- Pre-release checklist (branch, build, no secrets staged)
+- Conventional commit type reference (what triggers which version bump)
+- Step-by-step flow: push develop → PR to main → Release Please PR → merge → Docker builds
+- Troubleshooting for common failure modes
+
+#### Conventional commit convention
+All commits going into a release should follow this format: `<type>: <description>`
+
+| Type | Version bump | Use for |
+|------|-------------|---------|
+| `feat:` | minor (0.x.0) | New user-facing feature |
+| `fix:` | patch (0.0.x) | Bug fix |
+| `feat!:` | major (x.0.0) | Breaking change |
+| `chore:` | none | Deps, tooling, config |
+| `refactor:` | none | Code restructure, no behaviour change |
+| `ci:` | none | CI/CD workflow changes |
+| `docs:` | none | Documentation only |
+| `test:` | none | Adding or fixing tests |
+
+---
+
 ## Priority order (rough)
 
 1. **Session invalidation fix** — blocks every deployment; highest user friction
 2. **Due dates in todo UI** — schema ready, just needs UI; high value, low risk
-3. **Error boundaries** — high user-visible impact, low risk
-4. **"New version available" banner** — pairs with service worker groundwork
-5. **Push notifications** — depends on service worker being in place; meaningful new feature
-6. **API route consistency + auth helper** — makes all future API work cleaner
-7. **Testing** — write as work progresses through items above
-8. **Type safety tightening** — catches bugs at compile time
-9. **Loading states** — improves perceived performance
-10. **Server/client component audit** — meaningful but more involved
-11. **DB reliability** — investigate before committing to changes
-12. **Code organisation / readability** — lowest urgency, do alongside other work
+3. **CI/CD improvements** — Release Please + Docker split + branch protection + `/release` skill
+4. **Error boundaries** — high user-visible impact, low risk
+5. **"New version available" banner** — pairs with service worker groundwork
+6. **Push notifications** — depends on service worker being in place; meaningful new feature
+7. **API route consistency + auth helper** — makes all future API work cleaner
+8. **Testing** — write as work progresses through items above
+9. **Type safety tightening** — catches bugs at compile time
+10. **Loading states** — improves perceived performance
+11. **Server/client component audit** — meaningful but more involved
+12. **DB reliability** — investigate before committing to changes
+13. **Code organisation / readability** — lowest urgency, do alongside other work
