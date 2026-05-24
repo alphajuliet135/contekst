@@ -4,17 +4,22 @@ import { eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT ?? 'mailto:admin@localhost',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '',
-  process.env.VAPID_PRIVATE_KEY ?? '',
-)
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   const secret = process.env.NOTIFY_SECRET
-  if (!secret) {
+  const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY
+
+  if (!secret || !vapidPublic || !vapidPrivate) {
     return NextResponse.json({ error: 'Push notifications not configured' }, { status: 503 })
   }
+
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT ?? 'mailto:admin@localhost',
+    vapidPublic,
+    vapidPrivate,
+  )
 
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${secret}`) {
