@@ -1,15 +1,11 @@
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api'
 import { db } from '@/server/db'
 import { contexts, widgetConfigs, todoLists, todos, dates, notes, habits, habitLogs, links, people } from '@/server/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import { version } from '../../../package.json'
 
-export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const userId = session.user.id
-
+export const GET = withAuth(async (userId) => {
   const ctxRows = await db.query.contexts.findMany({ where: eq(contexts.userId, userId) })
   const ctxIds  = ctxRows.map(c => c.id)
 
@@ -54,4 +50,4 @@ export async function GET() {
       'Content-Disposition': `attachment; filename="contekst-backup-${dateStr}.json"`,
     },
   })
-}
+})

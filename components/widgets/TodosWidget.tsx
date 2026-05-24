@@ -1,27 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckSquare, Plus, Check, Trash2, X } from 'lucide-react'
 import type { Todo, TodoList, Priority } from '@/lib/types'
-import { formatDate } from '@/lib/utils'
-
-// ── Badge styles ──────────────────────────────────────────────────────────────
-
-const BADGE_BASE: React.CSSProperties = {
-  borderRadius: 5, padding: '1px 7px', fontSize: 11, fontWeight: 500,
-  flexShrink: 0, whiteSpace: 'nowrap',
-}
-const BADGE = {
-  high:   { background: 'rgba(212,136,58,0.18)',  color: '#d4883a', border: '1px solid rgba(212,136,58,0.25)' },
-  medium: { background: 'rgba(143,143,143,0.15)', color: '#8F8F8F', border: '1px solid rgba(143,143,143,0.2)' },
-  low:    { background: 'rgba(100,100,100,0.12)',  color: '#6B6B6B', border: '1px solid rgba(100,100,100,0.15)' },
-  done:   { background: 'rgba(55,138,221,0.15)',   color: '#378ADD', border: '1px solid rgba(55,138,221,0.2)' },
-} as const
+import { TodoRow, BADGE_BASE, BADGE } from './TodoRow'
+import { AddTodoForm } from './AddTodoForm'
 
 const priorityOrder: Record<Priority, number> = { high: 0, medium: 1, low: 2 }
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props {
   todos: Todo[]
@@ -32,10 +18,6 @@ interface Props {
 
 export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
   const router = useRouter()
-  const inputRef      = useRef<HTMLInputElement>(null)
-  const editInputRef  = useRef<HTMLInputElement>(null)
-  const listNameInputRef = useRef<HTMLInputElement>(null)
-  const newListInputRef  = useRef<HTMLInputElement>(null)
 
   // ── Todo state ──────────────────────────────────────────────────────────────
 
@@ -43,27 +25,25 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
   const [showForm, setShowForm]       = useState(false)
   const [newTitle, setNewTitle]       = useState('')
   const [newPriority, setNewPriority] = useState<Priority>('medium')
+  const [newDueDate, setNewDueDate]   = useState('')
   const [submitting, setSubmitting]   = useState(false)
   const [editingTodoId, setEditingTodoId]         = useState<string | null>(null)
   const [draftTitle, setDraftTitle]               = useState('')
-  const editRef                                   = useRef<HTMLInputElement>(null)
   const [editingPriorityId, setEditingPriorityId] = useState<string | null>(null)
+  const [editingDueDateId, setEditingDueDateId]   = useState<string | null>(null)
+  const [draftDueDate, setDraftDueDate]           = useState('')
 
   // ── List state ──────────────────────────────────────────────────────────────
 
-  const [lists, setLists]                   = useState<TodoList[]>(todoLists)
-  const [activeListId, setActiveListId]     = useState<string | null>(null)
-  const [editingListId, setEditingListId]   = useState<string | null>(null)
-  const [draftListName, setDraftListName]   = useState('')
-  const [addingList, setAddingList]         = useState(false)
-  const [newListName, setNewListName]       = useState('')
+  const [lists, setLists]                 = useState<TodoList[]>(todoLists)
+  const [activeListId, setActiveListId]   = useState<string | null>(null)
+  const [editingListId, setEditingListId] = useState<string | null>(null)
+  const [draftListName, setDraftListName] = useState('')
+  const [addingList, setAddingList]       = useState(false)
+  const [newListName, setNewListName]     = useState('')
 
   useEffect(() => { setItems(todos) }, [todos])
   useEffect(() => { setLists(todoLists) }, [todoLists])
-  useEffect(() => { if (showForm) inputRef.current?.focus() }, [showForm])
-  useEffect(() => { if (editingTodoId) editInputRef.current?.focus() }, [editingTodoId])
-  useEffect(() => { if (addingList) newListInputRef.current?.focus() }, [addingList])
-  useEffect(() => { if (editingListId) listNameInputRef.current?.focus() }, [editingListId])
 
   useEffect(() => {
     if (!editingPriorityId) return
@@ -74,7 +54,7 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [editingPriorityId])
 
-  // ── Visible items ────────────────────────────────────────────────────────────
+  // ── Derived ─────────────────────────────────────────────────────────────────
 
   const visibleItems = activeListId === null
     ? items.filter(t => t.listId == null)
@@ -126,15 +106,17 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
       id: tempId, contextId, userId: '',
       listId: activeListId,
       title, priority: newPriority,
+      dueDate: newDueDate || null,
       done: false, pinned: false,
       completedAt: null, createdAt: null,
     }])
     setShowForm(false)
     setNewTitle('')
     setNewPriority('medium')
+    setNewDueDate('')
     await fetch('/api/todos', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contextId, title, priority: newPriority, listId: activeListId }),
+      body: JSON.stringify({ contextId, title, priority: newPriority, listId: activeListId, dueDate: newDueDate || undefined }),
     })
     setSubmitting(false)
     router.refresh()
@@ -142,12 +124,7 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') handleAdd()
-    if (e.key === 'Escape') { setShowForm(false); setNewTitle(''); setNewPriority('medium') }
-  }
-
-  function startEditingTodo(todo: Todo) {
-    setEditingTodoId(todo.id)
-    setDraftTitle(todo.title)
+    if (e.key === 'Escape') { setShowForm(false); setNewTitle(''); setNewPriority('medium'); setNewDueDate('') }
   }
 
   async function handleTitleBlur() {
@@ -164,9 +141,17 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
     router.refresh()
   }
 
-  function handleTitleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') { e.currentTarget.blur() }
-    if (e.key === 'Escape') { setEditingTodoId(null) }
+  async function saveDueDate(todo: Todo, value: string) {
+    const dueDate = value || null
+    setEditingDueDateId(null)
+    setDraftDueDate('')
+    if (dueDate === (todo.dueDate ?? null)) return
+    setItems(prev => prev.map(t => t.id === todo.id ? { ...t, dueDate } : t))
+    await fetch(`/api/todos/${todo.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dueDate }),
+    })
+    router.refresh()
   }
 
   async function selectPriority(todo: Todo, p: Priority) {
@@ -255,7 +240,6 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
           )}
           {lists.length === 0 && addingList && (
             <input
-              ref={newListInputRef}
               value={newListName}
               onChange={e => setNewListName(e.target.value)}
               onBlur={() => { if (!newListName.trim()) { setAddingList(false); setNewListName('') } }}
@@ -263,6 +247,7 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
                 if (e.key === 'Enter') handleCreateList()
                 if (e.key === 'Escape') { setAddingList(false); setNewListName('') }
               }}
+              autoFocus
               placeholder="List name…"
               style={{
                 background: 'none', border: 'none', outline: 'none',
@@ -309,7 +294,6 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
             <div key={list.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
               {editingListId === list.id ? (
                 <input
-                  ref={listNameInputRef}
                   value={draftListName}
                   onChange={e => setDraftListName(e.target.value)}
                   onBlur={handleRenameList}
@@ -317,6 +301,7 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
                     if (e.key === 'Enter') e.currentTarget.blur()
                     if (e.key === 'Escape') setEditingListId(null)
                   }}
+                  autoFocus
                   style={{
                     background: 'none', border: 'none', outline: 'none',
                     fontSize: 12, color: 'hsl(var(--foreground))',
@@ -352,7 +337,6 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
           ))}
           {addingList ? (
             <input
-              ref={newListInputRef}
               value={newListName}
               onChange={e => setNewListName(e.target.value)}
               onBlur={() => { if (!newListName.trim()) { setAddingList(false); setNewListName('') } }}
@@ -360,6 +344,7 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
                 if (e.key === 'Enter') handleCreateList()
                 if (e.key === 'Escape') { setAddingList(false); setNewListName('') }
               }}
+              autoFocus
               placeholder="List name…"
               style={{
                 background: 'none', border: 'none', outline: 'none',
@@ -397,89 +382,31 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
       ) : (
         <div style={{ paddingBottom: showForm ? 0 : 6 }}>
           {activeItems.map(todo => (
-            <div key={todo.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '7px 16px' }}>
-              <span
-                onClick={() => toggleDone(todo)}
-                style={{
-                  width: 16, height: 16, borderRadius: '50%',
-                  border: '1.5px solid hsl(var(--border))',
-                  flexShrink: 0, marginTop: 1, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {editingTodoId === todo.id ? (
-                  <input
-                    ref={editInputRef}
-                    value={draftTitle}
-                    onChange={e => setDraftTitle(e.target.value)}
-                    onBlur={handleTitleBlur}
-                    onKeyDown={handleTitleKeyDown}
-                    style={{
-                      background: 'none', border: 'none', outline: 'none',
-                      fontSize: 13, lineHeight: 1.4, display: 'block',
-                      color: 'hsl(var(--foreground))',
-                      width: '100%', padding: 0, fontFamily: 'inherit',
-                    }}
-                  />
-                ) : (
-                  <span
-                    onClick={() => startEditingTodo(todo)}
-                    style={{ fontSize: 13, lineHeight: 1.4, display: 'block', cursor: 'text' }}
-                  >
-                    {todo.title}
-                  </span>
-                )}
-                {todo.dueDate && (
-                  <span style={{
-                    fontSize: 11,
-                    color: todo.dueDate <= today ? '#d95f5f' : 'hsl(var(--muted-foreground))',
-                    display: 'block', marginTop: 1,
-                  }}>
-                    {todo.dueDate <= today ? 'Overdue' : `Due ${formatDate(todo.dueDate)}`}
-                  </span>
-                )}
-              </div>
-              {editingPriorityId === todo.id ? (
-                <div data-prio-picker style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-                  {(['high', 'medium', 'low'] as Priority[]).map(p => (
-                    <button
-                      key={p}
-                      onMouseDown={e => { e.stopPropagation(); selectPriority(todo, p) }}
-                      style={{
-                        ...BADGE_BASE,
-                        ...(p === todo.priority
-                          ? BADGE[p]
-                          : { background: 'transparent', color: 'hsl(var(--muted-foreground))', border: '0.5px solid hsl(var(--border))' }),
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {p === 'high' ? 'H' : p === 'medium' ? 'M' : 'L'}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  onMouseDown={e => { e.stopPropagation(); setEditingPriorityId(todo.id) }}
-                  title="Change priority"
-                  style={{ ...BADGE_BASE, ...BADGE[todo.priority], cursor: 'pointer', border: 'none' }}
-                >
-                  {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Med' : 'Low'}
-                </button>
-              )}
-              <button
-                onClick={e => deleteTodo(e, todo.id)}
-                style={{
-                  background: 'none', border: 'none', padding: 3, marginTop: 1,
-                  color: 'hsl(var(--muted-foreground))', cursor: 'pointer',
-                  borderRadius: 4, display: 'flex', alignItems: 'center', opacity: 0.4,
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.4' }}
-              >
-                <Trash2 size={11} strokeWidth={1.5} />
-              </button>
-            </div>
+            <TodoRow
+              key={todo.id}
+              todo={todo}
+              today={today}
+              isEditingTitle={editingTodoId === todo.id}
+              draftTitle={draftTitle}
+              isEditingPriority={editingPriorityId === todo.id}
+              isEditingDueDate={editingDueDateId === todo.id}
+              draftDueDate={draftDueDate}
+              onToggle={() => toggleDone(todo)}
+              onDelete={e => deleteTodo(e, todo.id)}
+              onStartEditing={() => { setEditingTodoId(todo.id); setDraftTitle(todo.title) }}
+              onTitleChange={v => setDraftTitle(v)}
+              onTitleBlur={handleTitleBlur}
+              onTitleKeyDown={e => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+                if (e.key === 'Escape') setEditingTodoId(null)
+              }}
+              onOpenPriorityPicker={() => setEditingPriorityId(todo.id)}
+              onSelectPriority={p => selectPriority(todo, p)}
+              onStartEditingDueDate={() => { setEditingDueDateId(todo.id); setDraftDueDate(todo.dueDate ?? '') }}
+              onDraftDueDateChange={v => setDraftDueDate(v)}
+              onSaveDueDate={value => saveDueDate(todo, value)}
+              onCancelDueDateEdit={() => { setEditingDueDateId(null); setDraftDueDate('') }}
+            />
           ))}
 
           {doneItems.length > 0 && (
@@ -526,75 +453,20 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
           )}
 
           {showForm && (
-            <div style={{
-              padding: '10px 16px 12px',
-              borderTop: hasItems ? '0.5px solid hsl(var(--border))' : 'none',
-            }}>
-              <input
-                ref={inputRef}
-                type="text"
-                value={newTitle}
-                onChange={e => setNewTitle(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Add a task…"
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  background: 'none', border: 'none', outline: 'none',
-                  fontSize: 13, color: 'hsl(var(--foreground))',
-                  padding: '0 0 8px',
-                }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {(['high', 'medium', 'low'] as Priority[]).map(p => {
-                    const selected = newPriority === p
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setNewPriority(p)}
-                        style={{
-                          ...BADGE_BASE,
-                          ...(selected ? BADGE[p] : {
-                            background: 'transparent',
-                            color: 'hsl(var(--muted-foreground))',
-                            border: '0.5px solid hsl(var(--border))',
-                          }),
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {p === 'high' ? 'High' : p === 'medium' ? 'Med' : 'Low'}
-                      </button>
-                    )
-                  })}
-                </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => { setShowForm(false); setNewTitle(''); setNewPriority('medium') }}
-                    style={{
-                      background: 'none', border: 'none', fontSize: 12,
-                      color: 'hsl(var(--muted-foreground))', cursor: 'pointer', padding: '2px 4px',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAdd}
-                    disabled={!newTitle.trim() || submitting}
-                    style={{
-                      border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                      padding: '4px 12px', cursor: newTitle.trim() ? 'pointer' : 'default',
-                      background: newTitle.trim() ? color : 'hsl(var(--muted))',
-                      color: newTitle.trim() ? 'white' : 'hsl(var(--muted-foreground))',
-                    }}
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-            </div>
+            <AddTodoForm
+              newTitle={newTitle}
+              newPriority={newPriority}
+              newDueDate={newDueDate}
+              submitting={submitting}
+              hasItems={hasItems}
+              color={color}
+              onTitleChange={v => { setNewTitle(v) }}
+              onPriorityChange={p => setNewPriority(p)}
+              onDueDateChange={v => setNewDueDate(v)}
+              onAdd={handleAdd}
+              onCancel={() => { setShowForm(false); setNewTitle(''); setNewPriority('medium'); setNewDueDate('') }}
+              onKeyDown={handleKeyDown}
+            />
           )}
         </div>
       )}

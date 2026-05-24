@@ -1,19 +1,13 @@
-import { auth } from '@/lib/auth'
+import { withAuthParams } from '@/lib/api'
 import { db } from '@/server/db'
 import { contexts, todos, todoLists, dates, notes, habits, habitLogs, links, people, widgetConfigs } from '@/server/db/schema'
 import { eq, and, inArray, or, gte } from 'drizzle-orm'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import type { WidgetType } from '@/lib/types'
 
 const ALL_WIDGET_TYPES: WidgetType[] = ['todos', 'dates', 'notes', 'habits', 'links', 'people', 'mantra']
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { id } = await params
-  const userId = session.user.id
-
+export const GET = withAuthParams<{ id: string }>(async (userId, _req, { id }) => {
   const context = await db.query.contexts.findFirst({
     where: and(eq(contexts.id, id), eq(contexts.userId, userId)),
   })
@@ -104,4 +98,4 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     people: ctxPeople,
     mantraText,
   })
-}
+})

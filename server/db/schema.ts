@@ -135,3 +135,14 @@ export const people = sqliteTable('people', {
   note: text('note'),
   createdAt: text('created_at').default(sql`(current_timestamp)`),
 })
+
+// --- Push notifications ---
+
+export const pushSubscriptions = sqliteTable('push_subscriptions', {
+  id:       text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId:   text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh:   text('p256dh').notNull(),
+  auth:     text('auth').notNull(),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+})

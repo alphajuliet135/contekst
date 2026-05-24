@@ -1,14 +1,11 @@
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api'
 import { db } from '@/server/db'
 import { widgetConfigs, contexts } from '@/server/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import type { WidgetType } from '@/lib/types'
 
-export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = withAuth(async (userId, req) => {
   const body = await req.json()
   const { contextId, order } = body as { contextId: string; order: WidgetType[] }
 
@@ -17,7 +14,7 @@ export async function POST(req: NextRequest) {
   }
 
   const ctx = await db.query.contexts.findFirst({
-    where: and(eq(contexts.id, contextId), eq(contexts.userId, session.user.id)),
+    where: and(eq(contexts.id, contextId), eq(contexts.userId, userId)),
   })
   if (!ctx) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -34,4 +31,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true })
-}
+})
