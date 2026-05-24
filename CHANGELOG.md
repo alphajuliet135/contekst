@@ -4,6 +4,20 @@ All notable changes to Contekst are documented here.
 
 ---
 
+## [0.5.0](https://github.com/alphajuliet135/contekst/compare/v0.4.0...v0.5.0) (2026-05-24)
+
+
+### Features
+
+* document post-deploy stability fixes for stale sessions, backup restore, and data persistence ([a370182](https://github.com/alphajuliet135/contekst/commit/a37018211abe1d178fd5d758d054d543a404adad))
+
+
+### Bug Fixes
+
+* invalidate stale JWT when user no longer exists in DB ([ec260f4](https://github.com/alphajuliet135/contekst/commit/ec260f4cbb7be9e7e412311065c1dda0221efa29))
+* move webpush.setVapidDetails inside handler to avoid build-time error ([54cf84d](https://github.com/alphajuliet135/contekst/commit/54cf84d79a1e8860f04cfb031b48a74e16539ba0))
+* move webpush.setVapidDetails inside handler to avoid build-time error ([43e50b9](https://github.com/alphajuliet135/contekst/commit/43e50b95458f7f499bafe6704ef38ceff7138d5c))
+
 ## [0.4.0](https://github.com/alphajuliet135/contekst/compare/v0.3.2...v0.4.0) (2026-05-24)
 
 
