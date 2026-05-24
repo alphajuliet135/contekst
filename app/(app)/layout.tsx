@@ -4,6 +4,7 @@ import { db } from '@/server/db'
 import { contexts, users } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { Topbar } from '@/components/layout/Topbar'
+import UpdateBanner from '@/components/layout/UpdateBanner'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -35,6 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {children}
       </main>
+      <UpdateBanner />
     </div>
   )
 }

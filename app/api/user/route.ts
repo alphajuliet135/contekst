@@ -1,31 +1,26 @@
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api'
 import { db } from '@/server/db'
 import { users } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 
-export async function PATCH(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const PATCH = withAuth(async (userId, req) => {
   const body = await req.json()
   const { name, currentPassword, newPassword } = body
 
   const user = await db.query.users.findFirst({
-    where: eq(users.id, session.user.id),
+    where: eq(users.id, userId),
   })
   if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Update display name
   if (name !== undefined) {
     await db.update(users)
       .set({ name: name.trim() || null })
-      .where(eq(users.id, session.user.id))
+      .where(eq(users.id, userId))
     return NextResponse.json({ ok: true })
   }
 
-  // Change password
   if (currentPassword && newPassword) {
     const valid = await bcrypt.compare(currentPassword, user.passwordHash)
     if (!valid) {
@@ -37,9 +32,9 @@ export async function PATCH(req: NextRequest) {
     const hash = await bcrypt.hash(newPassword, 12)
     await db.update(users)
       .set({ passwordHash: hash })
-      .where(eq(users.id, session.user.id))
+      .where(eq(users.id, userId))
     return NextResponse.json({ ok: true })
   }
 
   return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
-}
+})

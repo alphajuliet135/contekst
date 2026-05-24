@@ -1,14 +1,11 @@
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api'
 import { db } from '@/server/db'
 import { widgetConfigs, contexts } from '@/server/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import type { WidgetType } from '@/lib/types'
 
-export async function PATCH(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const PATCH = withAuth(async (userId, req) => {
   const body = await req.json()
   const { contextId, widgetType, enabled, settings } = body as {
     contextId: string
@@ -22,7 +19,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const ctx = await db.query.contexts.findFirst({
-    where: and(eq(contexts.id, contextId), eq(contexts.userId, session.user.id)),
+    where: and(eq(contexts.id, contextId), eq(contexts.userId, userId)),
   })
   if (!ctx) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -36,7 +33,6 @@ export async function PATCH(req: NextRequest) {
   const setFields: Record<string, unknown> = {}
   if (enabled !== undefined) setFields.enabled = enabled
   if (settings !== undefined) {
-    // Merge with existing settings to avoid wiping unrelated keys (e.g. MantraWidget's text)
     const existingSettings = (existing?.settings as Record<string, unknown>) ?? {}
     setFields.settings = { ...existingSettings, ...settings }
   }
@@ -53,4 +49,4 @@ export async function PATCH(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true })
-}
+})

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, Plus, Check, Trash2, X } from 'lucide-react'
+import { CheckSquare, Plus, Check, Trash2, X, Calendar } from 'lucide-react'
 import type { Todo, TodoList, Priority } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 
@@ -48,6 +48,9 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
   const [draftTitle, setDraftTitle]               = useState('')
   const editRef                                   = useRef<HTMLInputElement>(null)
   const [editingPriorityId, setEditingPriorityId] = useState<string | null>(null)
+  const [newDueDate, setNewDueDate]                 = useState('')
+  const [editingDueDateId, setEditingDueDateId]     = useState<string | null>(null)
+  const [draftDueDate, setDraftDueDate]             = useState('')
 
   // ── List state ──────────────────────────────────────────────────────────────
 
@@ -126,15 +129,17 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
       id: tempId, contextId, userId: '',
       listId: activeListId,
       title, priority: newPriority,
+      dueDate: newDueDate || null,
       done: false, pinned: false,
       completedAt: null, createdAt: null,
     }])
     setShowForm(false)
     setNewTitle('')
     setNewPriority('medium')
+    setNewDueDate('')
     await fetch('/api/todos', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contextId, title, priority: newPriority, listId: activeListId }),
+      body: JSON.stringify({ contextId, title, priority: newPriority, listId: activeListId, dueDate: newDueDate || undefined }),
     })
     setSubmitting(false)
     router.refresh()
@@ -142,7 +147,7 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') handleAdd()
-    if (e.key === 'Escape') { setShowForm(false); setNewTitle(''); setNewPriority('medium') }
+    if (e.key === 'Escape') { setShowForm(false); setNewTitle(''); setNewPriority('medium'); setNewDueDate('') }
   }
 
   function startEditingTodo(todo: Todo) {
@@ -167,6 +172,19 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
   function handleTitleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') { e.currentTarget.blur() }
     if (e.key === 'Escape') { setEditingTodoId(null) }
+  }
+
+  async function saveDueDate(todo: Todo, value: string) {
+    const dueDate = value || null
+    setEditingDueDateId(null)
+    setDraftDueDate('')
+    if (dueDate === (todo.dueDate ?? null)) return
+    setItems(prev => prev.map(t => t.id === todo.id ? { ...t, dueDate } : t))
+    await fetch(`/api/todos/${todo.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dueDate }),
+    })
+    router.refresh()
   }
 
   async function selectPriority(todo: Todo, p: Priority) {
@@ -430,13 +448,50 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
                     {todo.title}
                   </span>
                 )}
-                {todo.dueDate && (
-                  <span style={{
-                    fontSize: 11,
-                    color: todo.dueDate <= today ? '#d95f5f' : 'hsl(var(--muted-foreground))',
-                    display: 'block', marginTop: 1,
-                  }}>
+                {editingDueDateId === todo.id ? (
+                  <input
+                    type="date"
+                    autoFocus
+                    value={draftDueDate}
+                    onChange={e => setDraftDueDate(e.target.value)}
+                    onBlur={() => saveDueDate(todo, draftDueDate)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') e.currentTarget.blur()
+                      if (e.key === 'Escape') { setEditingDueDateId(null); setDraftDueDate('') }
+                    }}
+                    style={{
+                      background: 'none', border: 'none', outline: 'none',
+                      fontSize: 12, color: 'hsl(var(--muted-foreground))',
+                      fontFamily: 'inherit', display: 'block', marginTop: 1,
+                      padding: 0, cursor: 'pointer',
+                    }}
+                  />
+                ) : todo.dueDate ? (
+                  <span
+                    onClick={() => { setEditingDueDateId(todo.id); setDraftDueDate(todo.dueDate ?? '') }}
+                    style={{
+                      fontSize: 11,
+                      color: todo.dueDate <= today ? '#d95f5f' : 'hsl(var(--muted-foreground))',
+                      display: 'block', marginTop: 1, cursor: 'pointer',
+                    }}
+                  >
                     {todo.dueDate <= today ? 'Overdue' : `Due ${formatDate(todo.dueDate)}`}
+                  </span>
+                ) : (
+                  <span
+                    className="due-date-add"
+                    onClick={() => { setEditingDueDateId(todo.id); setDraftDueDate('') }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 3,
+                      marginTop: 1, opacity: 0, cursor: 'pointer',
+                      fontSize: 11, color: 'hsl(var(--muted-foreground))',
+                      transition: 'opacity 100ms',
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '0'}
+                  >
+                    <Calendar size={10} strokeWidth={1.5} />
+                    Add date
                   </span>
                 )}
               </div>
@@ -544,6 +599,18 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
                   padding: '0 0 8px',
                 }}
               />
+              <input
+                type="date"
+                value={newDueDate}
+                onChange={e => setNewDueDate(e.target.value)}
+                style={{
+                  background: 'none', border: 'none', outline: 'none',
+                  fontSize: 12, color: 'hsl(var(--muted-foreground))',
+                  fontFamily: 'inherit', padding: '0 0 8px',
+                  display: 'block', width: '100%', boxSizing: 'border-box',
+                  cursor: 'pointer',
+                }}
+              />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                   {(['high', 'medium', 'low'] as Priority[]).map(p => {
@@ -571,7 +638,7 @@ export function TodosWidget({ todos, todoLists, color, contextId }: Props) {
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button
                     type="button"
-                    onClick={() => { setShowForm(false); setNewTitle(''); setNewPriority('medium') }}
+                    onClick={() => { setShowForm(false); setNewTitle(''); setNewPriority('medium'); setNewDueDate('') }}
                     style={{
                       background: 'none', border: 'none', fontSize: 12,
                       color: 'hsl(var(--muted-foreground))', cursor: 'pointer', padding: '2px 4px',

@@ -1,32 +1,25 @@
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api'
 import { db } from '@/server/db'
 import { contexts } from '@/server/db/schema'
-import { eq, and } from 'drizzle-orm'
-import { NextRequest, NextResponse } from 'next/server'
+import { eq } from 'drizzle-orm'
+import { NextResponse } from 'next/server'
 
-export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const GET = withAuth(async (userId) => {
   const rows = await db.query.contexts.findMany({
-    where: eq(contexts.userId, session.user.id),
+    where: eq(contexts.userId, userId),
     orderBy: (c, { asc }) => [asc(c.order)],
   })
-
   return NextResponse.json(rows)
-}
+})
 
-export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = withAuth(async (userId, req) => {
   const body = await req.json()
   const { name, type = 'macro', color = '#378ADD', icon = 'circle' } = body
 
   if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 })
 
   const [row] = await db.insert(contexts).values({
-    userId: session.user.id,
+    userId,
     name,
     type,
     color,
@@ -34,4 +27,4 @@ export async function POST(req: NextRequest) {
   }).returning()
 
   return NextResponse.json(row, { status: 201 })
-}
+})

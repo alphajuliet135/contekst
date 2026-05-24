@@ -1,12 +1,9 @@
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api'
 import { db } from '@/server/db'
 import { links } from '@/server/db/schema'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = withAuth(async (userId, req) => {
   const body = await req.json()
   const { contextId, title, url } = body
 
@@ -16,10 +13,10 @@ export async function POST(req: NextRequest) {
 
   const [row] = await db.insert(links).values({
     contextId,
-    userId: session.user.id,
+    userId,
     title,
     url,
   }).returning()
 
   return NextResponse.json(row, { status: 201 })
-}
+})

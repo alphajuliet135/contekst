@@ -1,14 +1,10 @@
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api'
 import { db } from '@/server/db'
 import { contexts, widgetConfigs, todoLists, todos, dates, notes, habits, habitLogs, links, people } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const userId = session.user.id
-
+export const POST = withAuth(async (userId, req) => {
   const body = await req.json()
   if (body?.version !== '1') {
     return NextResponse.json({ error: 'Unrecognised backup format' }, { status: 400 })
@@ -33,4 +29,4 @@ export async function POST(req: NextRequest) {
   if (pp?.length)   await db.insert(people).values(pp)
 
   return NextResponse.json({ ok: true })
-}
+})

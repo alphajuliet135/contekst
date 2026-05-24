@@ -160,7 +160,7 @@ Dark, minimal, confident. Near-black backgrounds with context-colour accents. Ro
 | API | Next.js Route Handlers | `app/api/` — contexts, todos, widgets |
 | Container | Docker multi-stage, multi-arch (amd64 + arm64) | |
 | Registry | GitHub Container Registry (GHCR) | |
-| CI/CD | GitHub Actions — trigger on merge to `main` (reads version from `package.json`, auto-tags) | |
+| CI/CD | GitHub Actions — Release Please for versioning/changelog; Docker build on release published | `/release` command guides the flow |
 | Mobile (later) | React Native + Expo | Same API, shared types |
 
 ---
@@ -204,7 +204,8 @@ contekst/
 ├── drizzle.config.ts
 ├── Dockerfile
 ├── docker-compose.yml
-└── .github/workflows/release.yml   # multi-arch build on merge to main
+├── .github/workflows/release.yml   # Release Please — versioning and GitHub Release
+└── .github/workflows/docker.yml    # multi-arch Docker build on release published
 ```
 
 ---
@@ -239,8 +240,10 @@ npm run dev
 # Migrations run automatically on startup.
 # On first visit, a signup form creates the admin account.
 
-# Release — merge develop → main; CI reads version from package.json,
-# creates the tag, and builds the multi-arch Docker image → GHCR.
+# Release — run /release in Claude Code for a guided checklist.
+# Conventional commits on develop → PR to main → Release Please opens
+# version-bump PR → merge it → GitHub Release published → Docker builds.
+# Types: feat: (minor), fix: (patch), feat!: (major), chore:/ci: (no bump).
 ```
 
 ---
