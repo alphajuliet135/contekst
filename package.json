@@ -20,15 +20,13 @@
     "@dnd-kit/utilities": "^3.2.2",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.0.0",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
     "drizzle-orm": "^0.36.0",
     "lucide-react": "^0.460.0",
     "next": "^16.2.6",
     "next-auth": "^5.0.0-beta.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.5.0"
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -36,6 +34,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.0",
     "drizzle-kit": "^0.28.0",
     "eslint": "^9.0.0",

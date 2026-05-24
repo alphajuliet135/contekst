@@ -3,8 +3,17 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { X, LogOut, Sun, Moon, Monitor } from 'lucide-react'
+import { X, LogOut, Sun, Moon, Monitor, Bell, BellOff } from 'lucide-react'
 import { version } from '../../package.json'
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(base64)
+  const arr = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i)
+  return arr
+}
 
 // ── Theme helpers ──────────────────────────────────────────────────────────
 
@@ -189,6 +198,75 @@ export function SettingsPanel({ user, onClose }: Props) {
       const data = await res.json().catch(() => ({}))
       setRestoreMsg({ text: (data as { error?: string }).error ?? 'Restore failed', ok: false })
     }
+  }
+
+  // Notifications
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | null>(null)
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [notifMsg, setNotifMsg] = useState<{ text: string; ok: boolean } | null>(null)
+
+  useEffect(() => {
+    if (typeof Notification !== 'undefined') {
+      setNotifPermission(Notification.permission)
+    }
+  }, [])
+
+  async function enableNotifications() {
+    setNotifLoading(true)
+    setNotifMsg(null)
+    try {
+      const permission = await Notification.requestPermission()
+      setNotifPermission(permission)
+      if (permission !== 'granted') {
+        setNotifMsg({ text: 'Permission denied', ok: false })
+        setNotifLoading(false)
+        return
+      }
+      const reg = await navigator.serviceWorker.ready
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      if (!vapidKey) {
+        setNotifMsg({ text: 'Push not configured on this server', ok: false })
+        setNotifLoading(false)
+        return
+      }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      })
+      const json = sub.toJSON()
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+      })
+      setNotifMsg({ text: 'Notifications enabled', ok: true })
+    } catch (err) {
+      console.error('[notifications] subscribe error:', err)
+      setNotifMsg({ text: 'Failed to enable notifications', ok: false })
+    }
+    setNotifLoading(false)
+  }
+
+  async function disableNotifications() {
+    setNotifLoading(true)
+    setNotifMsg(null)
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
+        await fetch('/api/push/subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        })
+        await sub.unsubscribe()
+      }
+      setNotifMsg({ text: 'Notifications disabled', ok: true })
+    } catch (err) {
+      console.error('[notifications] unsubscribe error:', err)
+      setNotifMsg({ text: 'Failed to disable notifications', ok: false })
+    }
+    setNotifLoading(false)
   }
 
   // Password
@@ -493,6 +571,61 @@ export function SettingsPanel({ user, onClose }: Props) {
           </section>
 
           <div style={{ borderTop: '0.5px solid hsl(var(--border))', marginBottom: 28 }} />
+
+          {/* Notifications */}
+          {notifPermission !== null && (
+            <>
+              <section style={{ marginBottom: 28 }}>
+                <SectionLabel>Notifications</SectionLabel>
+                <p style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', margin: '0 0 12px' }}>
+                  Receive a daily reminder for todos due today.
+                </p>
+                {notifPermission === 'granted' ? (
+                  <button
+                    onClick={disableNotifications}
+                    disabled={notifLoading}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '7px 14px', borderRadius: 7,
+                      border: '0.5px solid hsl(var(--border))',
+                      background: 'transparent', color: 'hsl(var(--muted-foreground))',
+                      fontSize: 12, fontWeight: 500,
+                      cursor: notifLoading ? 'default' : 'pointer',
+                      opacity: notifLoading ? 0.6 : 1,
+                    }}
+                  >
+                    <BellOff size={13} strokeWidth={1.75} />
+                    {notifLoading ? 'Disabling…' : 'Disable notifications'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={enableNotifications}
+                    disabled={notifLoading || notifPermission === 'denied'}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '7px 14px', borderRadius: 7,
+                      border: 'none',
+                      background: 'hsl(var(--foreground))',
+                      color: 'hsl(var(--background))',
+                      fontSize: 12, fontWeight: 500,
+                      cursor: (notifLoading || notifPermission === 'denied') ? 'default' : 'pointer',
+                      opacity: (notifLoading || notifPermission === 'denied') ? 0.5 : 1,
+                    }}
+                  >
+                    <Bell size={13} strokeWidth={1.75} />
+                    {notifLoading ? 'Enabling…' : notifPermission === 'denied' ? 'Blocked by browser' : 'Enable notifications'}
+                  </button>
+                )}
+                {notifMsg && (
+                  <p style={{ fontSize: 12, color: notifMsg.ok ? '#3DA05E' : '#d95f5f', margin: '8px 0 0' }}>
+                    {notifMsg.text}
+                  </p>
+                )}
+              </section>
+
+              <div style={{ borderTop: '0.5px solid hsl(var(--border))', marginBottom: 28 }} />
+            </>
+          )}
 
           {/* Session */}
           <section style={{ marginBottom: 28 }}>

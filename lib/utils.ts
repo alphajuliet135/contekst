@@ -1,10 +1,3 @@
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
-
 // Generate a lighter tint from a hex color for theming
 export function colorTint(hex: string, opacity = 0.12): string {
   const r = parseInt(hex.slice(1, 3), 16)
