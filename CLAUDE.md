@@ -249,6 +249,34 @@ npm run dev
 
 Expo app consuming the same REST API. Add a `packages/types` monorepo package when needed to share TypeScript types. No business logic in the client — everything stays server-side.
 
+---
+
+## Documentation (.docs)
+
+Planning and design artefacts live in `.docs/`:
+
+| Folder | Purpose |
+|--------|---------|
+| `concept_views/` | UI design screenshots and mockups |
+| `concept_plans/` | Written concept/planning documents |
+
+### Concept plan naming convention
+
+Files in `concept_plans/` follow this pattern:
+
+```
+YYYY-MM-DD-short-kebab-title.md
+```
+
+Example: `2026-05-24-app-stability-refactor.md`
+
+Each file should open with a one-line summary, then cover:
+- **What** — what is being changed or built
+- **Why** — the motivation or problem it solves
+- **How** — rough approach, open questions, constraints
+
+---
+
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
 
