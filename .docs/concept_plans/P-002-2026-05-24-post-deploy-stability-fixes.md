@@ -128,13 +128,15 @@ Claude Code slash commands live in `.claude/commands/` — each `.md` file becom
 
 ## Files affected
 
-| File | Change |
-|------|--------|
-| `lib/auth.ts` | Add DB lookup in `jwt` callback; return `null` when user missing |
-| `app/api/restore/route.ts` | Add `remap()` helper; apply to userId-bearing table inserts |
-| `docker-compose.yml` | Add comment about preserving `./data` across deploys |
-| `.github/workflows/docker.yml` | Rename display name to `Build & Push Docker Image` |
-| `.github/workflows/release.yml` | Rename display name to `Version & Release` |
-| `CLAUDE.md` | Add `## Claude Commands` section |
-| `.docs/concept_plans/P-001-…` | Renamed (was `2026-05-24-app-stability-refactor.md`) |
-| `.docs/concept_plans/P-002-…` | Renamed + expanded (was `2026-05-24-post-deploy-stability-fixes.md`) |
+| File | Change | Status |
+|------|--------|--------|
+| `lib/auth.ts` | Add DB lookup in `jwt` callback; return `null` when user missing | ✅ |
+| `app/api/restore/route.ts` | Add `remap()` helper; apply to userId-bearing table inserts | ✅ |
+| `docker-compose.yml` | Add comment about preserving `./data` across deploys | ✅ |
+| `.github/workflows/docker.yml` | Rename display name to `Build & Push Docker Image` | ✅ |
+| `.github/workflows/release.yml` | Rename display name to `Version & Release` | ✅ |
+| `CLAUDE.md` | Add `## Claude Commands` section + update naming convention | ✅ |
+| `.docs/concept_plans/P-001-…` | Renamed (was `2026-05-24-app-stability-refactor.md`) | ✅ |
+| `.docs/concept_plans/P-002-…` | Renamed + expanded (was `2026-05-24-post-deploy-stability-fixes.md`) | ✅ |
+
+**Shipped in v0.4.1**
