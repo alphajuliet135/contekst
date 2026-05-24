@@ -268,15 +268,27 @@ Planning and design artefacts live in `.docs/`:
 Files in `concept_plans/` follow this pattern:
 
 ```
-YYYY-MM-DD-short-kebab-title.md
+P-NNN-YYYY-MM-DD-short-kebab-title.md
 ```
 
-Example: `2026-05-24-app-stability-refactor.md`
+Example: `P-001-2026-05-24-app-stability-refactor.md`
+
+The `P-NNN` prefix is a short numeric ID for easy reference ("see P-002"). Increment the number for each new file.
 
 Each file should open with a one-line summary, then cover:
 - **What** — what is being changed or built
 - **Why** — the motivation or problem it solves
 - **How** — rough approach, open questions, constraints
+
+---
+
+## Claude Commands
+
+Slash commands available in Claude Code for this project (files in `.claude/commands/`):
+
+| Command | Purpose |
+|---------|---------|
+| `/release` | Guided checklist for cutting a new release — conventional commits, PR to main, Release Please, Docker build |
 
 ---
 

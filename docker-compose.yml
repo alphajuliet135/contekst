@@ -6,6 +6,9 @@ services:
     ports:
       - "3000:3000"
     volumes:
+      # IMPORTANT: This directory contains the SQLite database.
+      # Preserve it across deploys — deleting it wipes all user data.
+      # Back up via Settings → Export before updating the image.
       - ./data:/app/data
     environment:
       - DATABASE_URL=file:/app/data/contekst.db

@@ -38,8 +38,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: '/login',
   },
   callbacks: {
-    jwt({ token, user }) {
-      if (user) token.id = user.id
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+        return token
+      }
+      // On token refresh, verify the user still exists — return null to cleanly
+      // invalidate stale tokens when the DB has been reset, avoiding the
+      // "Cookies can only be modified in a Route Handler" crash.
+      if (token.id) {
+        const exists = await db.query.users.findFirst({
+          where: eq(users.id, token.id as string),
+          columns: { id: true },
+        })
+        if (!exists) return null
+      }
       return token
     },
     session({ session, token }) {

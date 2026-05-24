@@ -13,20 +13,34 @@ export const POST = withAuth(async (userId, req) => {
   const { contexts: ctx, widgetConfigs: wc, todoLists: tl, todos: td, dates: dt,
           notes: nt, habits: hb, habitLogs: hl, links: lk, people: pp } = body
 
+  // Backups store the original account's UUID. When restoring to a new account
+  // (e.g. after a DB reset), remap every userId field to the current user.
+  const backupUserId: string | undefined =
+    ctx?.[0]?.userId ?? td?.[0]?.userId ?? dt?.[0]?.userId
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function remap(arr: any[] | undefined): any[] {
+    if (!arr?.length) return []
+    if (!backupUserId || backupUserId === userId) return arr
+    return arr.map((item: { userId?: string }) =>
+      item.userId === backupUserId ? { ...item, userId } : item
+    )
+  }
+
   // Delete all existing user data — CASCADE handles all child rows
   await db.delete(contexts).where(eq(contexts.userId, userId))
 
-  // Re-insert in dependency order
-  if (ctx?.length)  await db.insert(contexts).values(ctx)
+  // Re-insert in dependency order (widgetConfigs/todoLists/habitLogs have no userId)
+  if (ctx?.length)  await db.insert(contexts).values(remap(ctx))
   if (wc?.length)   await db.insert(widgetConfigs).values(wc)
   if (tl?.length)   await db.insert(todoLists).values(tl)
-  if (td?.length)   await db.insert(todos).values(td)
-  if (dt?.length)   await db.insert(dates).values(dt)
-  if (nt?.length)   await db.insert(notes).values(nt)
-  if (hb?.length)   await db.insert(habits).values(hb)
+  if (td?.length)   await db.insert(todos).values(remap(td))
+  if (dt?.length)   await db.insert(dates).values(remap(dt))
+  if (nt?.length)   await db.insert(notes).values(remap(nt))
+  if (hb?.length)   await db.insert(habits).values(remap(hb))
   if (hl?.length)   await db.insert(habitLogs).values(hl)
-  if (lk?.length)   await db.insert(links).values(lk)
-  if (pp?.length)   await db.insert(people).values(pp)
+  if (lk?.length)   await db.insert(links).values(remap(lk))
+  if (pp?.length)   await db.insert(people).values(remap(pp))
 
   return NextResponse.json({ ok: true })
 })

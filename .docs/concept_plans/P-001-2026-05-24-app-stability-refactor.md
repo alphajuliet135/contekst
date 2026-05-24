@@ -1,4 +1,4 @@
-# App stability and code structure refactor
+# [P-001] App stability and code structure refactor
 
 V1 is feature-complete. Before adding anything new, consolidate the foundation — fix real pain points from the live system, improve reliability, and make the codebase easier to reason about.
 
