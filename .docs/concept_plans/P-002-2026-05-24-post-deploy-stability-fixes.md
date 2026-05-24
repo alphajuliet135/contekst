@@ -1,4 +1,4 @@
-# Post-deploy stability fixes — stale session, broken restore, data persistence
+# [P-002] Post-deploy stability fixes — stale session, broken restore, data persistence, CI names, Claude commands
 
 Three bugs surface together whenever the SQLite database is reset (fresh server, `./data` accidentally cleared, or restoring from backup after a re-install).
 
@@ -105,6 +105,27 @@ Add a comment to `docker-compose.yml` noting that `./data` must be preserved.
 
 ---
 
+---
+
+## CI: Workflow display names
+
+GitHub Actions workflow `name:` fields are too terse ("Docker" is ambiguous in the Actions UI).
+
+| File | Old name | New name |
+|------|----------|----------|
+| `.github/workflows/docker.yml` | `Docker` | `Build & Push Docker Image` |
+| `.github/workflows/release.yml` | `Release Please` | `Version & Release` |
+
+Filenames are unchanged — all CLI references (`--workflow=docker.yml`) continue to work.
+
+---
+
+## Claude commands documentation
+
+Claude Code slash commands live in `.claude/commands/` — each `.md` file becomes a `/command`. Currently only `/release` exists. Added a `## Claude Commands` section to `CLAUDE.md` listing available commands so contributors know what's there. No new command files created.
+
+---
+
 ## Files affected
 
 | File | Change |
@@ -112,3 +133,8 @@ Add a comment to `docker-compose.yml` noting that `./data` must be preserved.
 | `lib/auth.ts` | Add DB lookup in `jwt` callback; return `null` when user missing |
 | `app/api/restore/route.ts` | Add `remap()` helper; apply to userId-bearing table inserts |
 | `docker-compose.yml` | Add comment about preserving `./data` across deploys |
+| `.github/workflows/docker.yml` | Rename display name to `Build & Push Docker Image` |
+| `.github/workflows/release.yml` | Rename display name to `Version & Release` |
+| `CLAUDE.md` | Add `## Claude Commands` section |
+| `.docs/concept_plans/P-001-…` | Renamed (was `2026-05-24-app-stability-refactor.md`) |
+| `.docs/concept_plans/P-002-…` | Renamed + expanded (was `2026-05-24-post-deploy-stability-fixes.md`) |
