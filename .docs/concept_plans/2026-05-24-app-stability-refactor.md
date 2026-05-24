@@ -10,13 +10,24 @@ The app works, but it was built feature-first. Now that the scope is settled, th
 
 ---
 
+## Decisions
+
+| Question | Decision |
+|----------|----------|
+| `AUTH_SECRET` rotation | Rotate occasionally for security hygiene — treat as planned maintenance, communicate to users in advance |
+| Automated tests | Write tests alongside the refactor (especially API routes and utilities), not as a separate initiative |
+| Push notifications | Per-device opt-in via browser permission prompt; fire on the day the todo is due |
+| "New version available" banner | Always require user to tap Refresh — no auto-reload |
+
+---
+
 ## Areas to address
 
 ### Session invalidation on container update ⚠️ High priority
 
 - **Problem:** Every time the Docker container is updated on the live system, all sessions are invalidated and cookies must be cleared manually. Particularly painful on mobile.
 - **Likely cause:** `AUTH_SECRET` is not stable across deployments — if it's being auto-generated at build time or not persisted in the deployment environment, every new container produces a different signing key, making all existing JWTs invalid.
-- **Direction:** Ensure `AUTH_SECRET` is explicitly set to a stable value in the deployment environment (`.env` on the host, not inside the container). Document this clearly in the deployment notes. Also consider whether the current cookie settings (`secure`, `sameSite`, `domain`) are correct for the live setup.
+- **Direction:** Ensure `AUTH_SECRET` is explicitly set to a stable value in the deployment environment (`.env` on the host, not inside the container). Document this clearly in the deployment notes. `AUTH_SECRET` should be rotated periodically for security hygiene — when rotated, all sessions will be invalidated; treat this as planned maintenance and communicate it to users in advance. Also verify cookie settings (`secure`, `sameSite`, `domain`) are correct for the live setup.
 
 ### Due dates missing from todos UI ⚠️ High priority
 
@@ -26,18 +37,27 @@ The app works, but it was built feature-first. Now that the scope is settled, th
 ### "New version available" in-browser prompt
 
 - **Problem:** When a new container is deployed, users (especially on mobile) have no indication and continue using a stale version indefinitely.
-- **Direction:** Add a service worker that detects a new build hash and shows a non-intrusive banner: "New version available — Refresh". Next.js supports this pattern via a custom `_sw.js` or a library like `next-pwa`. This also lays the groundwork for push notifications (see below). The banner should be subtle — bottom of screen, dismissible, auto-disappears on refresh.
+- **Direction:** Add a service worker that detects a new build hash and shows a non-intrusive banner: "New version available — Refresh". Next.js supports this pattern via a custom service worker or a library like `next-pwa`. The banner should be subtle — bottom of screen, dismissible — and always requires the user to tap Refresh. No auto-reload. This also lays the groundwork for push notifications (see below).
 
 ### Push notifications for due dates (PWA)
 
 - **Problem:** No reminders for upcoming or overdue todos. Users who have installed the PWA on iOS or Android get nothing.
 - **Direction:** Add Web Push notification support. High-level requirements:
   - Service worker with push event handler (prerequisite: service worker from "new version" feature above)
-  - Notification permission prompt (on opt-in, not on first load)
-  - Store push subscription per user/device in DB (new table: `push_subscriptions`)
-  - Background job or cron that checks for todos due today/tomorrow and dispatches notifications
+  - Notification permission prompt shown on explicit opt-in, not on first load
+  - Per-device opt-in — store push subscription per user/device in DB (new table: `push_subscriptions`)
+  - Background job or cron that checks for todos due today and dispatches notifications on the day
   - iOS PWA push requires iOS 16.4+; Android works broadly
 - **Note:** This is the most significant new feature in this initiative. Scope it as a separate PR once the service worker is in place.
+
+### Testing
+
+- No automated tests currently exist. The refactor touches API routes, utilities, and data flows that are hard to verify manually.
+- **Direction:** Write tests alongside the refactor work — not as a separate initiative. Focus on:
+  - API route handlers (input validation, auth checks, response shapes)
+  - Utility functions in `lib/utils.ts` (pure functions, easy to test)
+  - DB query helpers once those are extracted
+- Use a lightweight test setup appropriate for Next.js (e.g., Vitest + Testing Library for components, Vitest for pure logic).
 
 ### Error handling
 
@@ -98,15 +118,6 @@ The app works, but it was built feature-first. Now that the scope is settled, th
 
 ---
 
-## Open questions
-
-- Should `AUTH_SECRET` be rotated occasionally for security, or kept permanently stable? (Rotating it will always invalidate sessions — maybe document a "planned maintenance" expectation.)
-- Is there appetite for adding any automated tests as part of this, or is that a separate initiative?
-- Push notifications: opt-in per-device, or a global user setting? What's the right default cadence (day-of, day-before)?
-- The "new version available" banner — should it auto-reload, or always require user confirmation?
-
----
-
 ## Priority order (rough)
 
 1. **Session invalidation fix** — blocks every deployment; highest user friction
@@ -115,8 +126,9 @@ The app works, but it was built feature-first. Now that the scope is settled, th
 4. **"New version available" banner** — pairs with service worker groundwork
 5. **Push notifications** — depends on service worker being in place; meaningful new feature
 6. **API route consistency + auth helper** — makes all future API work cleaner
-7. **Type safety tightening** — catches bugs at compile time
-8. **Loading states** — improves perceived performance
-9. **Server/client component audit** — meaningful but more involved
-10. **DB reliability** — investigate before committing to changes
-11. **Code organisation / readability** — lowest urgency, do alongside other work
+7. **Testing** — write as work progresses through items above
+8. **Type safety tightening** — catches bugs at compile time
+9. **Loading states** — improves perceived performance
+10. **Server/client component audit** — meaningful but more involved
+11. **DB reliability** — investigate before committing to changes
+12. **Code organisation / readability** — lowest urgency, do alongside other work
