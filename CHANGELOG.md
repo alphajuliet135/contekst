@@ -4,6 +4,17 @@ All notable changes to Contekst are documented here.
 
 ---
 
+## [0.4.0](https://github.com/alphajuliet135/contekst/compare/v0.3.2...v0.4.0) (2026-05-24)
+
+
+### Features
+
+* add documentation structure and guidelines for concept plans ([2209910](https://github.com/alphajuliet135/contekst/commit/22099102806362336710d1beaab920a291bf4f11))
+* add push notification support with subscription management ([6a4828f](https://github.com/alphajuliet135/contekst/commit/6a4828f766f83219d75c64077d446b5a17ad3eae))
+* add vitest for testing and configure test environment ([0d800c0](https://github.com/alphajuliet135/contekst/commit/0d800c0addca0115ff1caba82e2933cd9744ccd3))
+* enhance app stability and refactor code structure with clear decisions and testing direction ([ca13291](https://github.com/alphajuliet135/contekst/commit/ca13291b8b895301a852bbc1de9dbb4e85951026))
+* implement CI/CD improvements with Release Please, Docker workflow separation, and branch protection ([431ae26](https://github.com/alphajuliet135/contekst/commit/431ae260815259d6b88fc2962dbf76863ebde619))
+
 ## [0.3.0] — 2026-05-21
 
 ### Added
