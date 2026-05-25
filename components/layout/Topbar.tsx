@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Plus, Settings, LayoutGrid } from 'lucide-react'
+import { Plus, Settings, LayoutGrid, ChevronDown } from 'lucide-react'
 import type { Context } from '@/lib/types'
 import { colorTint } from '@/lib/utils'
 import { CreateContextModal } from './CreateContextModal'
 import { SettingsPanel } from './SettingsPanel'
+import { ContextDrawer } from './ContextDrawer'
 
 interface Props {
   contexts: Context[]
@@ -24,14 +25,21 @@ export function Topbar({ contexts, user }: Props) {
   const isMicro = pathname === '/micro'
   const activeCtxId = pathname.startsWith('/ctx/') ? pathname.slice(5) : null
 
+  const activeMacro = macros.find(c => c.id === activeCtxId)
+  const activeLabel = isMissionControl ? 'contekst' : isMicro ? 'Micro' : (activeMacro?.name ?? 'contekst')
+  const activeColor = activeMacro?.color
+
   const [showCreate, setShowCreate]     = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showDrawer, setShowDrawer]     = useState(false)
 
   return (
     <>
       <header
+        className="topbar"
         style={{
-          height: 52,
+          height: 'calc(52px + var(--safe-top))',
+          paddingTop: 'var(--safe-top)',
           background: 'hsl(var(--card))',
           borderBottom: '0.5px solid hsl(var(--border))',
           display: 'flex',
@@ -44,94 +52,117 @@ export function Topbar({ contexts, user }: Props) {
           flexShrink: 0,
         }}
       >
-        {/* Logo / Mission Control */}
-        <Link
-          href="/"
-          className="nav-item"
-          style={{
-            fontSize: 15,
-            fontWeight: 600,
-            letterSpacing: -0.3,
-            color: 'hsl(var(--foreground))',
-            textDecoration: 'none',
-            padding: '4px 10px',
-            borderRadius: 6,
-            marginRight: 6,
-            background: isMissionControl ? 'hsl(var(--muted))' : undefined,
-          }}
-        >
-          contekst
-        </Link>
+        {/* Desktop: scrollable tab strip */}
+        <div className="topbar-tabs">
+          {/* Logo / Mission Control */}
+          <Link
+            href="/"
+            className="nav-item"
+            style={{
+              fontSize: 15,
+              fontWeight: 600,
+              letterSpacing: -0.3,
+              color: 'hsl(var(--foreground))',
+              textDecoration: 'none',
+              padding: '4px 10px',
+              borderRadius: 6,
+              marginRight: 6,
+              whiteSpace: 'nowrap',
+              background: isMissionControl ? 'hsl(var(--muted))' : undefined,
+            }}
+          >
+            contekst
+          </Link>
 
-        {/* Macro context tabs */}
-        {macros.map(ctx => {
-          const isActive = activeCtxId === ctx.id
-          return (
-            <Link
-              key={ctx.id}
-              href={`/ctx/${ctx.id}`}
-              className="nav-item"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '4px 10px',
-                borderRadius: 6,
-                fontSize: 13,
-                fontWeight: 500,
-                color: 'hsl(var(--foreground))',
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-                background: isActive ? colorTint(ctx.color, 0.25) : undefined,
-              }}
-            >
-              <span
+          {/* Macro context tabs */}
+          {macros.map(ctx => {
+            const isActive = activeCtxId === ctx.id
+            return (
+              <Link
+                key={ctx.id}
+                href={`/ctx/${ctx.id}`}
+                className="nav-item"
                 style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  background: ctx.color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'hsl(var(--foreground))',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  background: isActive ? colorTint(ctx.color, 0.25) : undefined,
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: ctx.color,
+                    flexShrink: 0,
+                  }}
+                />
+                {ctx.name}
+              </Link>
+            )
+          })}
+
+          {/* Separator + Micro shortcut */}
+          {(macros.length > 0 || hasMicros) && (
+            <>
+              <div
+                style={{
+                  width: 1,
+                  height: 16,
+                  background: 'hsl(var(--border))',
+                  marginInline: 6,
                   flexShrink: 0,
                 }}
               />
-              {ctx.name}
-            </Link>
-          )
-        })}
+              <Link
+                href="/micro"
+                className="nav-item"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: isMicro ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  background: isMicro ? 'hsl(var(--muted))' : undefined,
+                }}
+              >
+                <LayoutGrid size={13} strokeWidth={1.75} />
+                Micro
+              </Link>
+            </>
+          )}
+        </div>
 
-        {/* Separator + Micro shortcut */}
-        {(macros.length > 0 || hasMicros) && (
-          <>
-            <div
-              style={{
-                width: 1,
-                height: 16,
-                background: 'hsl(var(--border))',
-                marginInline: 6,
-                flexShrink: 0,
-              }}
-            />
-            <Link
-              href="/micro"
-              className="nav-item"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '4px 10px',
-                borderRadius: 6,
-                fontSize: 13,
-                fontWeight: 500,
-                color: isMicro ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
-                textDecoration: 'none',
-                background: isMicro ? 'hsl(var(--muted))' : undefined,
-              }}
-            >
-              <LayoutGrid size={13} strokeWidth={1.75} />
-              Micro
-            </Link>
-          </>
-        )}
+        {/* Mobile: compact active-context button → opens drawer */}
+        <button
+          className="topbar-mobile-header nav-item"
+          onClick={() => setShowDrawer(true)}
+        >
+          {activeColor && (
+            <span style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: activeColor,
+              flexShrink: 0,
+            }} />
+          )}
+          <span>{activeLabel}</span>
+          <ChevronDown size={13} strokeWidth={1.75} style={{ flexShrink: 0, color: 'hsl(var(--muted-foreground))' }} />
+        </button>
 
         {/* Right: actions */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -161,8 +192,8 @@ export function Topbar({ contexts, user }: Props) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 32,
-              height: 32,
+              width: 44,
+              height: 44,
               borderRadius: 6,
               border: 'none',
               color: showSettings ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
@@ -182,6 +213,15 @@ export function Topbar({ contexts, user }: Props) {
       {showSettings && (
         <SettingsPanel user={user} onClose={() => setShowSettings(false)} />
       )}
+
+      <ContextDrawer
+        contexts={contexts}
+        activeContextId={activeCtxId}
+        isMissionControl={isMissionControl}
+        isMicro={isMicro}
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+      />
     </>
   )
 }

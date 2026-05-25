@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripHorizontal, Maximize2, Minimize2 } from 'lucide-react'
-import type { WidgetType, Todo, TodoList, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
+import type { WidgetType, WidgetInstance, Todo, TodoList, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
 import { TodosWidget } from './TodosWidget'
 import { DatesWidget } from './DatesWidget'
 import { NotesWidget } from './NotesWidget'
@@ -29,7 +29,6 @@ import { PeopleWidget } from './PeopleWidget'
 import { MantraWidget } from './MantraWidget'
 import { WidgetToggleBar } from './WidgetToggleBar'
 
-// Types that default to full-width when no explicit size is saved
 const FULL_WIDTH_DEFAULT: WidgetType[] = ['notes', 'mantra']
 
 // ── Sortable item wrapper ─────────────────────────────────────────────────────
@@ -82,6 +81,7 @@ function SortableItem({
           <GripHorizontal size={12} strokeWidth={1.5} />
         </div>
         <div
+          className="hide-on-mobile"
           onClick={e => { e.stopPropagation(); onToggleSize() }}
           style={{
             cursor: 'pointer', color: 'hsl(var(--muted-foreground))',
@@ -102,7 +102,7 @@ function SortableItem({
 interface Props {
   contextId: string
   contextColor: string
-  orderedEnabledTypes: WidgetType[]
+  orderedInstances: WidgetInstance[]
   initialEnabled: Record<WidgetType, boolean>
   widgetSettings: Partial<Record<WidgetType, Record<string, unknown>>>
   todos: Todo[]
@@ -120,39 +120,37 @@ interface Props {
 
 export function WidgetDashboard({
   contextId, contextColor,
-  orderedEnabledTypes, initialEnabled,
+  orderedInstances, initialEnabled,
   widgetSettings,
   todos, todoLists, dates, notes, habits, todayLogs, links, people, mantraText,
 }: Props) {
   const router = useRouter()
-  const [order, setOrder] = useState<WidgetType[]>(orderedEnabledTypes)
-  const [settingsState, setSettingsState] = useState(widgetSettings)
+  const [instances, setInstances] = useState<WidgetInstance[]>(orderedInstances)
+  // Per-instance size overrides keyed by widget config id
+  const [sizeOverrides, setSizeOverrides] = useState<Record<string, 'half' | 'full'>>({})
   const [isEditing, setIsEditing] = useState(false)
 
-  useEffect(() => { setOrder(orderedEnabledTypes) }, [orderedEnabledTypes])
-  useEffect(() => { setSettingsState(widgetSettings) }, [widgetSettings])
+  useEffect(() => { setInstances(orderedInstances) }, [orderedInstances])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor),
   )
 
-  function effectiveSize(type: WidgetType): 'half' | 'full' {
-    const saved = settingsState[type]?.size as string | undefined
+  function effectiveSize(instance: WidgetInstance): 'half' | 'full' {
+    if (sizeOverrides[instance.id]) return sizeOverrides[instance.id]
+    const saved = instance.settings?.size as string | undefined
     if (saved === 'half' || saved === 'full') return saved
-    return FULL_WIDTH_DEFAULT.includes(type) ? 'full' : 'half'
+    return FULL_WIDTH_DEFAULT.includes(instance.type) ? 'full' : 'half'
   }
 
-  async function handleToggleSize(type: WidgetType) {
-    const newSize = effectiveSize(type) === 'full' ? 'half' : 'full'
-    setSettingsState(prev => ({
-      ...prev,
-      [type]: { ...(prev[type] ?? {}), size: newSize },
-    }))
+  async function handleToggleSize(instance: WidgetInstance) {
+    const newSize = effectiveSize(instance) === 'full' ? 'half' : 'full'
+    setSizeOverrides(prev => ({ ...prev, [instance.id]: newSize }))
     await fetch('/api/widgets', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contextId, widgetType: type, settings: { size: newSize } }),
+      body: JSON.stringify({ widgetId: instance.id, settings: { size: newSize } }),
     })
   }
 
@@ -160,21 +158,46 @@ export function WidgetDashboard({
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = order.indexOf(active.id as WidgetType)
-    const newIndex = order.indexOf(over.id as WidgetType)
-    const newOrder = arrayMove(order, oldIndex, newIndex)
-    setOrder(newOrder)
+    const ids = instances.map(i => i.id)
+    const oldIndex = ids.indexOf(active.id as string)
+    const newIndex = ids.indexOf(over.id as string)
+    const newInstances = arrayMove(instances, oldIndex, newIndex)
+    setInstances(newInstances)
 
     await fetch('/api/widgets/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contextId, order: newOrder }),
+      body: JSON.stringify({ contextId, order: newInstances.map(i => i.id) }),
     })
     router.refresh()
   }
 
-  function renderWidget(type: WidgetType) {
-    if (type === 'todos')  return <TodosWidget  todos={todos} todoLists={todoLists} color={contextColor} contextId={contextId} />
+  async function handleAddTodosList(listName: string) {
+    const res = await fetch('/api/widgets/todos-list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contextId, listName }),
+    })
+    const { widgetId, listId } = await res.json()
+    setInstances(prev => [...prev, {
+      id: widgetId,
+      type: 'todos',
+      settings: { listId },
+      label: listName,
+    }])
+    router.refresh()
+  }
+
+  async function handleRemoveTodosWidget(widgetId: string) {
+    setInstances(prev => prev.filter(i => i.id !== widgetId))
+    await fetch(`/api/widgets/${widgetId}`, { method: 'DELETE' })
+    router.refresh()
+  }
+
+  function renderWidget(instance: WidgetInstance) {
+    const { type, settings } = instance
+    const listId = settings?.listId as string | undefined
+    if (type === 'todos')  return <TodosWidget todos={todos} todoLists={todoLists} color={contextColor} contextId={contextId} listId={listId} />
     if (type === 'dates')  return <DatesWidget  dates={dates}   color={contextColor} contextId={contextId} />
     if (type === 'notes')  return <NotesWidget  notes={notes}   color={contextColor} contextId={contextId} />
     if (type === 'habits') return <HabitsWidget habits={habits} logs={todayLogs} color={contextColor} contextId={contextId} />
@@ -183,6 +206,8 @@ export function WidgetDashboard({
     if (type === 'mantra') return <MantraWidget initialText={mantraText} contextId={contextId} color={contextColor} />
     return null
   }
+
+  const todosInstances = instances.filter(i => i.type === 'todos')
 
   return (
     <>
@@ -203,24 +228,34 @@ export function WidgetDashboard({
           </button>
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={order} strategy={rectSortingStrategy}>
+          <SortableContext items={instances.map(i => i.id)} strategy={rectSortingStrategy}>
             <div className="widget-grid">
-              {order.map(type => (
+              {instances.map(instance => (
                 <SortableItem
-                  key={type}
-                  id={type}
+                  key={instance.id}
+                  id={instance.id}
                   editMode={isEditing}
-                  isFullWidth={effectiveSize(type) === 'full'}
-                  onToggleSize={() => handleToggleSize(type)}
+                  isFullWidth={effectiveSize(instance) === 'full'}
+                  onToggleSize={() => handleToggleSize(instance)}
                 >
-                  {renderWidget(type)}
+                  {renderWidget(instance)}
                 </SortableItem>
               ))}
             </div>
           </SortableContext>
         </DndContext>
       </div>
-      {isEditing && <WidgetToggleBar contextId={contextId} color={contextColor} initialEnabled={initialEnabled} />}
+      {isEditing && (
+        <WidgetToggleBar
+          contextId={contextId}
+          color={contextColor}
+          initialEnabled={initialEnabled}
+          todosInstances={todosInstances}
+          onAddTodosList={handleAddTodosList}
+          onRemoveTodosWidget={handleRemoveTodosWidget}
+          widgetSettings={widgetSettings}
+        />
+      )}
     </>
   )
 }

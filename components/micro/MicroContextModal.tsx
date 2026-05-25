@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { WidgetDashboard } from '@/components/widgets/WidgetDashboard'
-import type { WidgetType, Todo, TodoList, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
+import type { WidgetType, WidgetInstance, Todo, TodoList, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
 
 interface DashboardData {
   contextId: string
   contextColor: string
-  orderedEnabledTypes: WidgetType[]
+  orderedInstances: WidgetInstance[]
   initialEnabled: Record<WidgetType, boolean>
   widgetSettings: Partial<Record<WidgetType, Record<string, unknown>>>
   todos: Todo[]
@@ -118,7 +118,7 @@ export function MicroContextModal({ contextId, contextName, contextColor, onClos
             <WidgetDashboard
               contextId={data.contextId}
               contextColor={data.contextColor}
-              orderedEnabledTypes={data.orderedEnabledTypes}
+              orderedInstances={data.orderedInstances}
               initialEnabled={data.initialEnabled}
               widgetSettings={data.widgetSettings}
               todos={data.todos}

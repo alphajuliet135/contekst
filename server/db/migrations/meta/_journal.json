@@ -57,6 +57,13 @@
       "when": 1779635758979,
       "tag": "0007_white_proteus",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1748131200000,
+      "tag": "0008_multi_todos_widget",
+      "breakpoints": true
     }
   ]
 }

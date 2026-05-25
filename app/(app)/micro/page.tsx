@@ -87,11 +87,7 @@ export default async function MicroPage() {
           </p>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: 12,
-        }}>
+        <div className="micro-grid">
           {microContexts.map(ctx => {
             const ctxTodos = (todosByCtx.get(ctx.id) ?? [])
               .slice()

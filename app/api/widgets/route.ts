@@ -7,28 +7,41 @@ import type { WidgetType } from '@/lib/types'
 
 export const PATCH = withAuth(async (userId, req) => {
   const body = await req.json()
-  const { contextId, widgetType, enabled, settings } = body as {
-    contextId: string
-    widgetType: WidgetType
+  const { contextId, widgetType, widgetId, enabled, settings } = body as {
+    contextId?: string
+    widgetType?: WidgetType
+    widgetId?: string
     enabled?: boolean
     settings?: Record<string, unknown>
   }
 
-  if (!contextId || !widgetType || (enabled === undefined && settings === undefined)) {
-    return NextResponse.json({ error: 'contextId, widgetType, and either enabled or settings required' }, { status: 400 })
+  if (enabled === undefined && settings === undefined) {
+    return NextResponse.json({ error: 'Either enabled or settings required' }, { status: 400 })
   }
 
-  const ctx = await db.query.contexts.findFirst({
-    where: and(eq(contexts.id, contextId), eq(contexts.userId, userId)),
-  })
-  if (!ctx) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  let existing = widgetId
+    ? await db.query.widgetConfigs.findFirst({ where: eq(widgetConfigs.id, widgetId) })
+    : (contextId && widgetType)
+      ? await db.query.widgetConfigs.findFirst({
+          where: and(eq(widgetConfigs.contextId, contextId), eq(widgetConfigs.widgetType, widgetType)),
+        })
+      : null
 
-  const existing = await db.query.widgetConfigs.findFirst({
-    where: and(
-      eq(widgetConfigs.contextId, contextId),
-      eq(widgetConfigs.widgetType, widgetType),
-    ),
-  })
+  if (!existing && (!contextId || !widgetType)) {
+    return NextResponse.json({ error: 'contextId + widgetType or widgetId required' }, { status: 400 })
+  }
+
+  if (existing) {
+    const ctx = await db.query.contexts.findFirst({
+      where: and(eq(contexts.id, existing.contextId), eq(contexts.userId, userId)),
+    })
+    if (!ctx) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  } else {
+    const ctx = await db.query.contexts.findFirst({
+      where: and(eq(contexts.id, contextId!), eq(contexts.userId, userId)),
+    })
+    if (!ctx) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   const setFields: Record<string, unknown> = {}
   if (enabled !== undefined) setFields.enabled = enabled
@@ -41,8 +54,8 @@ export const PATCH = withAuth(async (userId, req) => {
     await db.update(widgetConfigs).set(setFields).where(eq(widgetConfigs.id, existing.id))
   } else {
     await db.insert(widgetConfigs).values({
-      contextId,
-      widgetType,
+      contextId: contextId!,
+      widgetType: widgetType!,
       enabled: enabled ?? true,
       settings: settings ?? null,
     })

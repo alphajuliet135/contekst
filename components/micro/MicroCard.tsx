@@ -133,16 +133,24 @@ export function MicroCard({ ctx, initialTodos, initialDates, today }: Props) {
             {/* Todo rows */}
             {displayTodos.map(todo => (
               <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 14px' }}>
-                {/* Checkbox */}
+                {/* Checkbox — 44px hit zone via absolute overlay */}
                 <span
                   onClick={() => toggleDone(todo)}
                   style={{
+                    position: 'relative',
                     width: 14, height: 14, borderRadius: '50%',
                     border: '1.5px solid hsl(var(--border))',
                     flexShrink: 0, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}
-                />
+                >
+                  <span style={{
+                    position: 'absolute',
+                    top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: 44, height: 44,
+                  }} />
+                </span>
                 <span style={{
                   fontSize: 12, flex: 1, minWidth: 0,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',

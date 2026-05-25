@@ -30,7 +30,15 @@ export interface WidgetConfig {
   widgetType: WidgetType
   enabled: boolean
   settings?: Record<string, unknown> | null
+  label?: string | null
   order: number
+}
+
+export interface WidgetInstance {
+  id: string
+  type: WidgetType
+  settings: Record<string, unknown> | null
+  label: string | null
 }
 
 export interface Todo {
