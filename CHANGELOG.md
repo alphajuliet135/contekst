@@ -4,6 +4,38 @@ All notable changes to Contekst are documented here.
 
 ---
 
+## [0.6.0](https://github.com/alphajuliet135/contekst/compare/v0.5.0...v0.6.0) (2026-05-25)
+
+
+### Features
+
+* enhance widget functionality and UI improvements ([7a7752f](https://github.com/alphajuliet135/contekst/commit/7a7752f2a0dd5a68bbaa4a7d3f62c5ddc8cc50a1))
+
+## [0.5.0](https://github.com/alphajuliet135/contekst/compare/v0.4.0...v0.5.0) (2026-05-24)
+
+
+### Features
+
+* document post-deploy stability fixes for stale sessions, backup restore, and data persistence ([a370182](https://github.com/alphajuliet135/contekst/commit/a37018211abe1d178fd5d758d054d543a404adad))
+
+
+### Bug Fixes
+
+* invalidate stale JWT when user no longer exists in DB ([ec260f4](https://github.com/alphajuliet135/contekst/commit/ec260f4cbb7be9e7e412311065c1dda0221efa29))
+* move webpush.setVapidDetails inside handler to avoid build-time error ([54cf84d](https://github.com/alphajuliet135/contekst/commit/54cf84d79a1e8860f04cfb031b48a74e16539ba0))
+* move webpush.setVapidDetails inside handler to avoid build-time error ([43e50b9](https://github.com/alphajuliet135/contekst/commit/43e50b95458f7f499bafe6704ef38ceff7138d5c))
+
+## [0.4.0](https://github.com/alphajuliet135/contekst/compare/v0.3.2...v0.4.0) (2026-05-24)
+
+
+### Features
+
+* add documentation structure and guidelines for concept plans ([2209910](https://github.com/alphajuliet135/contekst/commit/22099102806362336710d1beaab920a291bf4f11))
+* add push notification support with subscription management ([6a4828f](https://github.com/alphajuliet135/contekst/commit/6a4828f766f83219d75c64077d446b5a17ad3eae))
+* add vitest for testing and configure test environment ([0d800c0](https://github.com/alphajuliet135/contekst/commit/0d800c0addca0115ff1caba82e2933cd9744ccd3))
+* enhance app stability and refactor code structure with clear decisions and testing direction ([ca13291](https://github.com/alphajuliet135/contekst/commit/ca13291b8b895301a852bbc1de9dbb4e85951026))
+* implement CI/CD improvements with Release Please, Docker workflow separation, and branch protection ([431ae26](https://github.com/alphajuliet135/contekst/commit/431ae260815259d6b88fc2962dbf76863ebde619))
+
 ## [0.3.0] — 2026-05-21
 
 ### Added

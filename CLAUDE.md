@@ -256,16 +256,20 @@ Expo app consuming the same REST API. Add a `packages/types` monorepo package wh
 
 ## Documentation (.docs)
 
-Planning and design artefacts live in `.docs/`:
+All planning, tracking, and design artefacts live in `.docs/`:
 
-| Folder | Purpose |
-|--------|---------|
-| `concept_views/` | UI design screenshots and mockups |
-| `concept_plans/` | Written concept/planning documents |
+| File / Folder | Purpose |
+|---------------|---------|
+| `BUGS.md` | Bug tracker — open and fixed bugs as a checklist |
+| `FEATURES.md` | Feature tracker — planned and shipped features as a checklist |
+| `views/` | UI design screenshots and mockups |
+| `plans/` | Detailed planning docs for larger features (P-NNN format) |
 
-### Concept plan naming convention
+`BUGS.md` and `FEATURES.md` are the source of truth for what's open and what's shipped. Keep them up to date as work lands.
 
-Files in `concept_plans/` follow this pattern:
+### Plan naming convention
+
+Files in `plans/` follow this pattern:
 
 ```
 P-NNN-YYYY-MM-DD-short-kebab-title.md
@@ -275,10 +279,12 @@ Example: `P-001-2026-05-24-app-stability-refactor.md`
 
 The `P-NNN` prefix is a short numeric ID for easy reference ("see P-002"). Increment the number for each new file.
 
-Each file should open with a one-line summary, then cover:
+Each plan file covers:
 - **What** — what is being changed or built
 - **Why** — the motivation or problem it solves
-- **How** — rough approach, open questions, constraints
+- **How** — approach, decisions, open questions
+
+When a feature is large enough to have a plan, `FEATURES.md` links to it.
 
 ---
 
