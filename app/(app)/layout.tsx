@@ -5,6 +5,7 @@ import { contexts, users } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { Topbar } from '@/components/layout/Topbar'
 import UpdateBanner from '@/components/layout/UpdateBanner'
+import { SwipeBack } from '@/components/layout/SwipeBack'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -37,6 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </main>
       <UpdateBanner />
+      <SwipeBack />
     </div>
   )
 }

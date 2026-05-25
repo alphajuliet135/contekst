@@ -343,7 +343,9 @@ export function SettingsPanel({ user, onClose }: Props) {
       {/* Panel */}
       <div style={{
         position: 'fixed',
-        top: 52, right: 0, bottom: 0,
+        top: 'calc(52px + var(--safe-top, 0px))',
+        right: 'var(--safe-right, 0px)',
+        bottom: 0,
         width: 320,
         zIndex: 101,
         background: 'hsl(var(--card))',
@@ -373,7 +375,7 @@ export function SettingsPanel({ user, onClose }: Props) {
         </div>
 
         {/* Scrollable content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 20, paddingBottom: 'max(20px, var(--safe-bottom, 0px))' }}>
           {/* Appearance */}
           <section style={{ marginBottom: 28 }}>
             <SectionLabel>Appearance</SectionLabel>

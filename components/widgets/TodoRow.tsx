@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Trash2, Calendar } from 'lucide-react'
 import type { Todo, Priority } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
@@ -48,9 +48,14 @@ export function TodoRow({
   onStartEditingDueDate, onDraftDueDateChange, onSaveDueDate, onCancelDueDateEdit,
 }: TodoRowProps) {
   const editInputRef = useRef<HTMLInputElement>(null)
+  const [rowHovered, setRowHovered] = useState(false)
 
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '7px 16px' }}>
+    <div
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '7px 16px' }}
+      onMouseEnter={() => setRowHovered(true)}
+      onMouseLeave={() => setRowHovered(false)}
+    >
       <span
         onClick={onToggle}
         style={{
@@ -113,22 +118,19 @@ export function TodoRow({
           >
             {todo.dueDate <= today ? 'Overdue' : `Due ${formatDate(todo.dueDate)}`}
           </span>
-        ) : (
+        ) : rowHovered ? (
           <span
             onClick={onStartEditingDueDate}
             style={{
               display: 'flex', alignItems: 'center', gap: 3,
-              marginTop: 1, opacity: 0, cursor: 'pointer',
+              marginTop: 1, cursor: 'pointer',
               fontSize: 11, color: 'hsl(var(--muted-foreground))',
-              transition: 'opacity 100ms',
             }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '0'}
           >
             <Calendar size={10} strokeWidth={1.5} />
             Add date
           </span>
-        )}
+        ) : null}
       </div>
       {isEditingPriority ? (
         <div data-prio-picker style={{ display: 'flex', gap: 3, flexShrink: 0 }}>

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'Contekst',
   },
 }
@@ -17,6 +17,7 @@ export const viewport: Viewport = {
   themeColor: '#171717',
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

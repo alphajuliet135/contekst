@@ -3,7 +3,7 @@ import { db } from '@/server/db'
 import { contexts, todos, todoLists, dates, notes, habits, habitLogs, links, people, widgetConfigs } from '@/server/db/schema'
 import { eq, and, inArray, or, gte } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
-import type { WidgetType } from '@/lib/types'
+import type { WidgetType, WidgetInstance } from '@/lib/types'
 
 const ALL_WIDGET_TYPES: WidgetType[] = ['todos', 'dates', 'notes', 'habits', 'links', 'people', 'mantra']
 
@@ -63,29 +63,67 @@ export const GET = withAuthParams<{ id: string }>(async (userId, _req, { id }) =
   const mantraConfig = configs.find(c => c.widgetType === 'mantra')
   const mantraText = (mantraConfig?.settings as { text?: string } | null)?.text ?? null
 
-  const configMap = new Map(configs.map(c => [c.widgetType, c.enabled]))
-  const orderMap  = new Map(configs.map(c => [c.widgetType, c.order]))
-  const isEnabled = (type: WidgetType) =>
-    configMap.has(type) ? (configMap.get(type) ?? true) : type !== 'mantra'
+  const todosConfigs = configs.filter(c => c.widgetType === 'todos')
+  const otherConfigs = configs.filter(c => c.widgetType !== 'todos')
+  const otherConfigMap = new Map(otherConfigs.map(c => [c.widgetType, c]))
 
-  const orderedEnabledTypes = ALL_WIDGET_TYPES
-    .map(type => ({ type, order: orderMap.get(type) ?? 99 }))
-    .filter(({ type }) => isEnabled(type))
-    .sort((a, b) => a.order - b.order)
-    .map(({ type }) => type)
+  const isSingleEnabled = (type: WidgetType) => {
+    const cfg = otherConfigMap.get(type)
+    return cfg ? cfg.enabled : type !== 'mantra'
+  }
 
   const initialEnabled = Object.fromEntries(
-    ALL_WIDGET_TYPES.map(type => [type, isEnabled(type)])
+    ALL_WIDGET_TYPES.map(type => [
+      type,
+      type === 'todos' ? todosConfigs.some(c => c.enabled) : isSingleEnabled(type),
+    ])
   ) as Record<WidgetType, boolean>
 
+  const enabledTodosInstances: WidgetInstance[] = todosConfigs
+    .filter(c => c.enabled)
+    .sort((a, b) => a.order - b.order)
+    .map(c => ({
+      id: c.id,
+      type: 'todos' as WidgetType,
+      settings: (c.settings as Record<string, unknown>) ?? null,
+      label: c.label ?? null,
+    }))
+
+  const defaultTodosInstance: WidgetInstance = { id: 'default-todos', type: 'todos', settings: null, label: null }
+  const todosInstances = enabledTodosInstances.length > 0 ? enabledTodosInstances : [defaultTodosInstance]
+
+  type WithOrder = WidgetInstance & { _order: number }
+  const singleInstances: WithOrder[] = ALL_WIDGET_TYPES
+    .filter(t => t !== 'todos' && isSingleEnabled(t))
+    .map(type => {
+      const cfg = otherConfigMap.get(type)
+      return {
+        id: cfg?.id ?? `default-${type}`,
+        type,
+        settings: (cfg?.settings as Record<string, unknown>) ?? null,
+        label: cfg?.label ?? null,
+        _order: cfg?.order ?? 99,
+      }
+    })
+
+  const todosWithOrder: WithOrder[] = todosInstances.map((inst, i) => ({
+    ...inst,
+    _order: todosConfigs.find(c => c.id === inst.id)?.order ?? i,
+  }))
+
+  const orderedInstances: WidgetInstance[] = [...todosWithOrder, ...singleInstances]
+    .sort((a, b) => a._order - b._order)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    .map(({ _order, ...rest }) => rest)
+
   const widgetSettings = Object.fromEntries(
-    configs.map(c => [c.widgetType, (c.settings as Record<string, unknown>) ?? {}])
+    otherConfigs.map(c => [c.widgetType, (c.settings as Record<string, unknown>) ?? {}])
   ) as Partial<Record<WidgetType, Record<string, unknown>>>
 
   return NextResponse.json({
     contextId: context.id,
     contextColor: context.color,
-    orderedEnabledTypes,
+    orderedInstances,
     initialEnabled,
     widgetSettings,
     todos: ctxTodos,

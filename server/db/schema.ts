@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 // --- Auth ---
@@ -39,10 +39,9 @@ export const widgetConfigs = sqliteTable('widget_configs', {
   }).notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
   settings: text('settings', { mode: 'json' }),
+  label: text('label'),
   order: integer('order').notNull().default(0),
-}, (t) => ({
-  uniqContextWidget: uniqueIndex('widget_configs_ctx_type_uniq').on(t.contextId, t.widgetType),
-}))
+})
 
 // --- Todo Lists ---
 
