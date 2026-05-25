@@ -4,6 +4,13 @@ All notable changes to Contekst are documented here.
 
 ---
 
+## [0.6.0](https://github.com/alphajuliet135/contekst/compare/v0.5.0...v0.6.0) (2026-05-25)
+
+
+### Features
+
+* enhance widget functionality and UI improvements ([7a7752f](https://github.com/alphajuliet135/contekst/commit/7a7752f2a0dd5a68bbaa4a7d3f62c5ddc8cc50a1))
+
 ## [0.5.0](https://github.com/alphajuliet135/contekst/compare/v0.4.0...v0.5.0) (2026-05-24)
 
 
