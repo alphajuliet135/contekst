@@ -262,3 +262,32 @@ header.topbar::-webkit-scrollbar {
 
   .micro-grid { gap: 16px; }
 }
+
+/* ── Macro dashboard responsive layout ────────────────────────────── */
+.macro-hero-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; align-items: start; }
+.macro-body-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px; }
+.macro-ref-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+@media (max-width: 768px) {
+  .macro-hero-grid { grid-template-columns: 1fr; }
+  .macro-body-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .macro-ref-strip { grid-template-columns: 1fr; }
+}
+
+/* ── Mission Control layout ────────────────────────────────────────── */
+.mc-briefing-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; align-items: end; }
+.mc-body-grid     { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; }
+.mc-micro-grid    { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mc-pinned-strip  { display: flex; gap: 8px; }
+
+@media (max-width: 768px) {
+  .mc-briefing-hero { grid-template-columns: 1fr; }
+  .mc-body-grid     { grid-template-columns: 1fr; }
+  .mc-pinned-strip  { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mc-pinned-strip > * { min-width: 240px; flex-shrink: 0; }
+}
+@media (max-width: 640px) {
+  .mc-micro-grid { grid-template-columns: 1fr; }
+}

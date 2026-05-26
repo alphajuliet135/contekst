@@ -13,10 +13,11 @@ export const GET = withAuthParams<{ id: string }>(async (userId, _req, { id }) =
   })
   if (!context) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const today = new Date().toISOString().split('T')[0]
-  const cutoff = new Date(Date.now() - 7 * 86400000).toISOString()
+  const today     = new Date().toISOString().split('T')[0]
+  const cutoff    = new Date(Date.now() - 7 * 86400000).toISOString()
+  const cutoff28d = new Date(Date.now() - 28 * 86400000).toISOString().split('T')[0]
 
-  const [ctxTodos, ctxTodoLists, ctxDates, ctxNotes, ctxHabits, ctxLinks, ctxPeople, configs] = await Promise.all([
+  const [ctxTodos, ctxTodoLists, ctxDates, ctxNotes, ctxHabits, ctxLinks, ctxPeople, configs, completedIn28d] = await Promise.all([
     db.query.todos.findMany({
       where: and(
         eq(todos.contextId, id),
@@ -51,14 +52,25 @@ export const GET = withAuthParams<{ id: string }>(async (userId, _req, { id }) =
     db.query.widgetConfigs.findMany({
       where: eq(widgetConfigs.contextId, id),
     }),
+    db.query.todos.findMany({
+      where: and(eq(todos.contextId, id), eq(todos.userId, userId), eq(todos.done, true), gte(todos.completedAt, cutoff28d)),
+      columns: { completedAt: true },
+    }),
   ])
 
   const habitIds = ctxHabits.map(h => h.id)
-  const todayLogs = habitIds.length > 0
-    ? await db.query.habitLogs.findMany({
-        where: and(eq(habitLogs.date, today), inArray(habitLogs.habitId, habitIds)),
-      })
-    : []
+  const [todayLogs, habitLogs28d] = await Promise.all([
+    habitIds.length > 0
+      ? db.query.habitLogs.findMany({
+          where: and(eq(habitLogs.date, today), inArray(habitLogs.habitId, habitIds)),
+        })
+      : Promise.resolve([]),
+    habitIds.length > 0
+      ? db.query.habitLogs.findMany({
+          where: and(inArray(habitLogs.habitId, habitIds), gte(habitLogs.date, cutoff28d)),
+        })
+      : Promise.resolve([]),
+  ])
 
   const mantraConfig = configs.find(c => c.widgetType === 'mantra')
   const mantraText = (mantraConfig?.settings as { text?: string } | null)?.text ?? null
@@ -120,6 +132,15 @@ export const GET = withAuthParams<{ id: string }>(async (userId, _req, { id }) =
     otherConfigs.map(c => [c.widgetType, (c.settings as Record<string, unknown>) ?? {}])
   ) as Partial<Record<WidgetType, Record<string, unknown>>>
 
+  const sectionEnabled = Object.fromEntries(
+    ALL_WIDGET_TYPES.map(type => [
+      type,
+      type === 'todos'
+        ? (todosConfigs.some(c => c.enabled) || todosConfigs.length === 0)
+        : isSingleEnabled(type as WidgetType),
+    ])
+  ) as Record<string, boolean>
+
   return NextResponse.json({
     contextId: context.id,
     contextColor: context.color,
@@ -132,8 +153,11 @@ export const GET = withAuthParams<{ id: string }>(async (userId, _req, { id }) =
     notes: ctxNotes,
     habits: ctxHabits,
     todayLogs,
+    habitLogs28d,
+    completedIn28d,
     links: ctxLinks,
     people: ctxPeople,
     mantraText,
+    sectionEnabled,
   })
 })

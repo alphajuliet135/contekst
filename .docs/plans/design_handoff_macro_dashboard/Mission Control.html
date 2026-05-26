@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Contekst — Mission Control redesign</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0f0f0f; color: #EDEDED;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="mc-variant-a.jsx"></script>
+<script type="text/babel" src="mc-variant-b.jsx"></script>
+<script type="text/babel" src="mc-variant-b-mobile.jsx"></script>
+<script type="text/babel" src="mc-macro-a.jsx"></script>
+<script type="text/babel" src="mc-macro-b.jsx"></script>
+<script type="text/babel" src="mc-macro-b-work.jsx"></script>
+<script type="text/babel" src="mc-macro-b-mobile.jsx"></script>
+<script type="text/babel" src="mc-notes-variations.jsx"></script>
+<script type="text/babel" src="mc-notes-mobile.jsx"></script>
+<script type="text/babel" src="mc-macro-with-notes.jsx"></script>
+<script type="text/babel" src="mc-macro-final.jsx"></script>
+
+<script type="text/babel">
+  const { DesignCanvas, DCSection, DCArtboard, IOSDevice } = window;
+
+  function TabletFrame({ children, width = 820, height = 1180, dark = true }) {
+    return (
+      <div style={{
+        width, height, borderRadius: 38, overflow: 'hidden',
+        position: 'relative', background: dark ? '#000' : '#F2F2F7',
+        boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
+        padding: 8, boxSizing: 'border-box',
+      }}>
+        <div style={{ width: '100%', height: '100%', borderRadius: 30, overflow: 'hidden', position: 'relative' }}>
+          {/* status bar */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: 28,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0 28px', color: '#EDEDED', fontSize: 13, fontWeight: 500,
+            background: '#1F1F1F', borderBottom: '0.5px solid #333',
+            fontFamily: '-apple-system, "SF Pro", system-ui', zIndex: 50,
+          }}>
+            <span>9:41</span>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <svg width="16" height="11" viewBox="0 0 19 12" fill="#EDEDED"><rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7"/><rect x="4.8" y="5" width="3.2" height="7" rx="0.7"/><rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7"/><rect x="14.4" y="0" width="3.2" height="12" rx="0.7"/></svg>
+              <svg width="22" height="11" viewBox="0 0 27 13"><rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="#EDEDED" strokeOpacity="0.5" fill="none"/><rect x="2" y="2" width="18" height="9" rx="2" fill="#EDEDED"/></svg>
+            </div>
+          </div>
+          <div style={{ paddingTop: 28, width: '100%', height: '100%' }}>
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function App() {
+    return (
+      <DesignCanvas title="Contekst — redesigns">
+        <DCSection id="desktop" title="Mission Control · 2 variations">
+          <DCArtboard id="variant-a" label="A — Tightened" width={1320} height={1080}>
+            <window.MissionControlA />
+          </DCArtboard>
+          <DCArtboard id="variant-b" label="B — Briefing" width={1320} height={1040}>
+            <window.MissionControlB />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="mobile" title="Mobile · Briefing on device">
+          <DCArtboard id="iphone" label="iPhone 15 Pro · 402×874" width={446} height={918}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+              <IOSDevice width={402} height={874} dark>
+                <div style={{ width: '100%', height: '100%', paddingTop: 62, paddingBottom: 34, boxSizing: 'border-box', background: '#171717' }}>
+                  <window.MissionControlPhone />
+                </div>
+              </IOSDevice>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="ipad" label="iPad · 820×1180" width={868} height={1228}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+              <TabletFrame width={820} height={1180}>
+                <window.MissionControlTablet />
+              </TabletFrame>
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="macro" title="Macro dashboard — refined">
+          <DCArtboard id="macro-final-pilot" label="Desktop · Pilot license" width={1320} height={1100}>
+            <window.MX_Pilot />
+          </DCArtboard>
+          <DCArtboard id="macro-final-work" label="Desktop · Work" width={1320} height={1100}>
+            <window.MX_Work />
+          </DCArtboard>
+          <DCArtboard id="macro-final-ipad" label="iPad · Pilot license" width={868} height={1228}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+              <TabletFrame width={820} height={1180}>
+                <window.MX_PilotTab />
+              </TabletFrame>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="macro-final-iphone-pilot" label="iPhone · Pilot license" width={446} height={918}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+              <IOSDevice width={402} height={874} dark>
+                <div style={{ width: '100%', height: '100%', paddingTop: 62, paddingBottom: 34, boxSizing: 'border-box', background: '#171717' }}>
+                  <window.MX_PilotPhn />
+                </div>
+              </IOSDevice>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="macro-final-iphone-work" label="iPhone · Work" width={446} height={918}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+              <IOSDevice width={402} height={874} dark>
+                <div style={{ width: '100%', height: '100%', paddingTop: 62, paddingBottom: 34, boxSizing: 'border-box', background: '#171717' }}>
+                  <window.MX_WorkPhn />
+                </div>
+              </IOSDevice>
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="macro-explorations" title="Macro dashboard — earlier explorations">
+          <DCArtboard id="macro-a" label="A — Focused" width={1320} height={1280}>
+            <window.MacroDashboardA />
+          </DCArtboard>
+          <DCArtboard id="macro-b" label="B — Context briefing (Pilot license)" width={1320} height={1240}>
+            <window.MacroDashboardB />
+          </DCArtboard>
+          <DCArtboard id="macro-b-work" label="B — Context briefing (Work)" width={1320} height={1240}>
+            <window.MacroDashboardWork />
+          </DCArtboard>
+          <DCArtboard id="macro-with-notes" label="B — with two-pane Notes" width={1320} height={1340}>
+            <window.MacroDashboardWithNotes />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="macro-mobile" title="Macro · earlier mobile drafts">
+          <DCArtboard id="macro-iphone" label="iPhone 15 Pro · 402×874" width={446} height={918}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+              <IOSDevice width={402} height={874} dark>
+                <div style={{ width: '100%', height: '100%', paddingTop: 62, paddingBottom: 34, boxSizing: 'border-box', background: '#171717' }}>
+                  <window.MacroDashboardPhone />
+                </div>
+              </IOSDevice>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="macro-ipad" label="iPad · 820×1180" width={868} height={1228}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+              <TabletFrame width={820} height={1180}>
+                <window.MacroDashboardTablet />
+              </TabletFrame>
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="notes" title="Notes widget · many notes">
+          <DCArtboard id="notes-stack" label="Stack — refined current pattern" width={720} height={680}>
+            <div style={{ width: '100%', height: '100%', background: '#171717', padding: 20, boxSizing: 'border-box' }}>
+              <window.NotesStack />
+            </div>
+          </DCArtboard>
+          <DCArtboard id="notes-twopane" label="Two-pane — titles + content" width={720} height={680}>
+            <div style={{ width: '100%', height: '100%', background: '#171717', padding: 20, boxSizing: 'border-box' }}>
+              <window.NotesTwoPane />
+            </div>
+          </DCArtboard>
+          <DCArtboard id="notes-titlelist" label="Title list — accordion" width={720} height={680}>
+            <div style={{ width: '100%', height: '100%', background: '#171717', padding: 20, boxSizing: 'border-box' }}>
+              <window.NotesTitleList />
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="notes-mobile" title="Notes (two-pane) · mobile + tablet">
+          <DCArtboard id="notes-phone-list" label="iPhone — list state" width={446} height={918}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+              <IOSDevice width={402} height={874} dark>
+                <div style={{ width: '100%', height: '100%', paddingTop: 62, paddingBottom: 34, boxSizing: 'border-box', background: '#171717', padding: '62px 14px 34px' }}>
+                  <window.NotesPhoneList />
+                </div>
+              </IOSDevice>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="notes-phone-detail" label="iPhone — detail state" width={446} height={918}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+              <IOSDevice width={402} height={874} dark>
+                <div style={{ width: '100%', height: '100%', paddingTop: 62, paddingBottom: 34, boxSizing: 'border-box', background: '#171717', padding: '62px 14px 34px' }}>
+                  <window.NotesPhoneDetail />
+                </div>
+              </IOSDevice>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="notes-tablet" label="iPad — two-pane" width={868} height={760}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', padding: 28, boxSizing: 'border-box' }}>
+              <div style={{ width: 760, height: 640 }}>
+                <window.NotesTabletTwoPane />
+              </div>
+            </div>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>

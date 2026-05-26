@@ -1,53 +1,16 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/server/db'
-import { contexts, todos, dates, users } from '@/server/db/schema'
-import { eq, and, lte, gte } from 'drizzle-orm'
-import { Calendar, ArrowRight } from 'lucide-react'
-import { formatDate, colorTint } from '@/lib/utils'
-import { TodoCheckbox } from '@/components/ui/TodoCheckbox'
-import { Greeting } from '@/components/mission-control/Greeting'
-import { TodayFocus } from '@/components/mission-control/TodayFocus'
-
-// ── Countdown helper ─────────────────────────────────────────────────────────
-
-function getCountdown(dateStr: string, today: string): string {
-  const [y, m, d]   = dateStr.split('-').map(Number)
-  const [ty, tm, td] = today.split('-').map(Number)
-  const diff = Math.round(
-    (new Date(y, m - 1, d).getTime() - new Date(ty, tm - 1, td).getTime()) / 86400000
-  )
-  if (diff <= 0) return 'Today'
-  if (diff === 1) return 'Tomorrow'
-  if (diff < 7)  return `In ${diff} days`
-  if (diff < 14) return 'In 1 week'
-  if (diff < 21) return 'In 2 weeks'
-  if (diff < 28) return 'In 3 weeks'
-  if (diff < 45) return 'In 1 month'
-  if (diff < 75) return 'In 2 months'
-  return `In ${Math.round(diff / 30)} months`
-}
-
-// ── Shared badge styles ──────────────────────────────────────────────────────
-
-const BADGE_BASE: React.CSSProperties = {
-  borderRadius: 5,
-  padding: '1px 7px',
-  fontSize: 11,
-  fontWeight: 500,
-  flexShrink: 0,
-  whiteSpace: 'nowrap',
-}
-
-const BADGE_STYLES = {
-  high:   { background: 'rgba(212,136,58,0.18)',  color: '#d4883a', border: '1px solid rgba(212,136,58,0.25)' },
-  medium: { background: 'rgba(143,143,143,0.15)', color: '#8F8F8F', border: '1px solid rgba(143,143,143,0.2)' },
-  low:    { background: 'rgba(100,100,100,0.12)',  color: '#6B6B6B', border: '1px solid rgba(100,100,100,0.15)' },
-} as const
-
-function badge(priority: keyof typeof BADGE_STYLES): React.CSSProperties {
-  return { ...BADGE_BASE, ...BADGE_STYLES[priority] }
-}
+import { contexts, todos, dates, users, widgetConfigs } from '@/server/db/schema'
+import { eq, and, lte, gte, inArray } from 'drizzle-orm'
+import { BriefingHero } from '@/components/mission-control/BriefingHero'
+import { MantraStrip } from '@/components/mission-control/MantraStrip'
+import { PinnedStrip, type PinnedItemShape } from '@/components/mission-control/PinnedStrip'
+import { NowColumn, type TodoWithCtx } from '@/components/mission-control/NowColumn'
+import { WeekTimeline, type AheadDay, type AheadItem } from '@/components/mission-control/WeekTimeline'
+import { MicroPulse, type MicroCardData } from '@/components/mission-control/MicroPulse'
+import type { Priority } from '@/lib/types'
+import type { WeekDay } from '@/components/mission-control/WeekStrip'
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -56,342 +19,261 @@ export default async function MissionControlPage() {
   if (!session?.user?.id) redirect('/login')
   const userId = session.user.id
 
-  // Read name directly from DB so it reflects updates without requiring re-auth
   const dbUser = await db.query.users.findFirst({
     where: eq(users.id, userId),
     columns: { name: true },
   })
-  const userName = dbUser?.name
+  const firstName = dbUser?.name?.split(' ')[0] ?? null
 
   const userContexts = await db.query.contexts.findMany({
     where: eq(contexts.userId, userId),
     orderBy: (c, { asc }) => [asc(c.order)],
   })
-
   const macros = userContexts.filter(c => c.type === 'macro')
-  const micros = userContexts.filter(c => c.type === 'micro')
+  const micros  = userContexts.filter(c => c.type === 'micro')
+  const contextIds = userContexts.map(c => c.id)
 
-  const today = new Date().toISOString().split('T')[0]
-  const in7days  = new Date(Date.now() +  7 * 86400000).toISOString().split('T')[0]
-  const in30days = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+  const today    = new Date().toISOString().split('T')[0]
+  const in6days  = new Date(Date.now() +  6 * 86400000).toISOString().split('T')[0]
+  const in14days = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+  const cutoff7d = new Date(Date.now() -  7 * 86400000).toISOString()
 
-  const [activeTodos, upcomingDates, pinnedDates, allUpcoming] = await Promise.all([
+  const [activeTodos, datesIn14d, pinnedDates, mantraConfigs, completedIn7d] = await Promise.all([
     db.query.todos.findMany({
       where: and(eq(todos.userId, userId), eq(todos.done, false)),
     }),
     db.query.dates.findMany({
-      where: and(eq(dates.userId, userId), gte(dates.date, today), lte(dates.date, in7days)),
+      where: and(eq(dates.userId, userId), gte(dates.date, today), lte(dates.date, in14days)),
+      orderBy: (d, { asc }) => [asc(d.date)],
     }),
     db.query.dates.findMany({
       where: and(eq(dates.userId, userId), eq(dates.pinned, true)),
     }),
-    db.query.dates.findMany({
-      where: and(eq(dates.userId, userId), gte(dates.date, today), lte(dates.date, in30days)),
-      orderBy: (d, { asc }) => [asc(d.date)],
+    contextIds.length > 0
+      ? db.query.widgetConfigs.findMany({
+          where: and(
+            eq(widgetConfigs.widgetType, 'mantra'),
+            inArray(widgetConfigs.contextId, contextIds),
+          ),
+        })
+      : Promise.resolve([]),
+    db.query.todos.findMany({
+      where: and(eq(todos.userId, userId), eq(todos.done, true), gte(todos.completedAt, cutoff7d)),
+      columns: { contextId: true, completedAt: true },
     }),
   ])
 
-  const todosByCtx = new Map<string, typeof activeTodos>()
-  for (const t of activeTodos) {
-    if (!todosByCtx.has(t.contextId)) todosByCtx.set(t.contextId, [])
-    todosByCtx.get(t.contextId)!.push(t)
+  // ── Derived data ────────────────────────────────────────────────────────────
+
+  const overdueTodos  = activeTodos.filter(t => t.dueDate && t.dueDate < today)
+  const dueTodayTodos = activeTodos.filter(t => t.dueDate === today)
+
+  const upcoming7dCount =
+    datesIn14d.filter(d => d.date >= today && d.date <= in6days).length +
+    activeTodos.filter(t => t.dueDate && t.dueDate > today && t.dueDate <= in6days).length
+
+  // topContextByLoad — macro with most overdue+dueToday items
+  const loadByCtx = new Map<string, number>()
+  for (const t of [...overdueTodos, ...dueTodayTodos]) {
+    loadByCtx.set(t.contextId, (loadByCtx.get(t.contextId) ?? 0) + 1)
   }
+  const topCtxId = [...loadByCtx.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
+  const topContextByLoad = topCtxId
+    ? (macros.find(c => c.id === topCtxId)?.name ?? null)
+    : null
 
-  const datesByCtx = new Map<string, typeof upcomingDates>()
-  for (const d of upcomingDates) {
-    if (!datesByCtx.has(d.contextId)) datesByCtx.set(d.contextId, [])
-    datesByCtx.get(d.contextId)!.push(d)
-  }
+  // Mantra — first non-empty text
+  const mantraText = mantraConfigs
+    .map(c => (c.settings as { text?: string } | null)?.text)
+    .find(t => t && t.trim().length > 0) ?? null
 
-  function getUrgent(ctxId: string) {
-    return (todosByCtx.get(ctxId) ?? [])
-      .filter(t => t.priority === 'high' || (t.dueDate != null && t.dueDate <= today))
-      .slice(0, 4)
-  }
-
-  const pinnedTodos = activeTodos.filter(t => t.pinned)
-
-  const dailyTodos = activeTodos
-    .filter(t => (t.dueDate != null && t.dueDate <= today) || t.priority === 'high')
-    .map(t => {
-      const ctx = userContexts.find(c => c.id === t.contextId)
-      return { ...t, contextName: ctx?.name ?? '', contextColor: ctx?.color ?? '#666666' }
+  // WeekStrip — 7 days from today
+  function makeWeekDays(): WeekDay[] {
+    const priorityOpacity: Record<Priority, number> = { high: 1, medium: 0.65, low: 0.4 }
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(Date.now() + i * 86400000)
+      const dateStr = d.toISOString().split('T')[0]
+      const isToday = dateStr === today
+      const dayLabel = d.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase().slice(0, 3)
+      const dateNum = d.getDate()
+      const dots = [
+        ...activeTodos
+          .filter(t => t.dueDate === dateStr)
+          .map(t => {
+            const ctx = userContexts.find(c => c.id === t.contextId)
+            return { color: ctx?.color ?? '#666', opacity: priorityOpacity[t.priority] }
+          }),
+        ...datesIn14d
+          .filter(d2 => d2.date === dateStr)
+          .map(d2 => {
+            const ctx = userContexts.find(c => c.id === d2.contextId)
+            return { color: ctx?.color ?? '#666', opacity: 0.7 }
+          }),
+      ]
+      return { dayLabel, dateNum, isToday, dots }
     })
+  }
+  const weekDays = makeWeekDays()
 
-  const firstName = userName?.split(' ')[0] ?? null
-
-  const dateLabel = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long', day: 'numeric', month: 'long',
+  // Pinned items — up to 3
+  const pinnedTodos = activeTodos.filter(t => t.pinned)
+  const pinnedAll: PinnedItemShape[] = [
+    ...pinnedTodos.map(t => ({ id: t.id, type: 'todo' as const, title: t.title, contextId: t.contextId })),
+    ...pinnedDates.map(d => ({ id: d.id, type: 'date' as const, title: d.title, contextId: d.contextId })),
+  ].slice(0, 3).map(item => {
+    const ctx = userContexts.find(c => c.id === item.contextId)
+    return { ...item, contextName: ctx?.name ?? '', contextColor: ctx?.color ?? '#666' }
   })
 
+  // NowColumn data
+  function withCtx(t: typeof activeTodos[number]): TodoWithCtx {
+    const ctx = userContexts.find(c => c.id === t.contextId)
+    return {
+      id: t.id, title: t.title, priority: t.priority, dueDate: t.dueDate,
+      contextName: ctx?.name ?? '', contextColor: ctx?.color ?? '#666',
+    }
+  }
+  const overdueWithCtx  = overdueTodos.map(withCtx)
+  const dueTodayWithCtx = dueTodayTodos.map(withCtx)
+
+  // WeekTimeline — group todos/dates by day for tomorrow → +14 days
+  function makeAheadDays(): AheadDay[] {
+    const todayMonth = new Date(today).getMonth()
+    const map = new Map<string, AheadItem[]>()
+
+    for (const t of activeTodos) {
+      if (!t.dueDate || t.dueDate <= today || t.dueDate > in14days) continue
+      if (!map.has(t.dueDate)) map.set(t.dueDate, [])
+      const ctx = userContexts.find(c => c.id === t.contextId)
+      map.get(t.dueDate)!.push({
+        kind: 'todo', id: t.id, title: t.title, priority: t.priority,
+        contextColor: ctx?.color ?? '#666', contextName: ctx?.name ?? '',
+      })
+    }
+    for (const d of datesIn14d) {
+      if (d.date <= today) continue
+      if (!map.has(d.date)) map.set(d.date, [])
+      const ctx = userContexts.find(c => c.id === d.contextId)
+      map.get(d.date)!.push({
+        kind: 'date', id: d.id, title: d.title, subtitle: d.note ?? undefined,
+        contextColor: ctx?.color ?? '#666', contextName: ctx?.name ?? '',
+      })
+    }
+
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([dateStr, items]) => {
+        const [y, mo, dy] = dateStr.split('-').map(Number)
+        const dt = new Date(y, mo - 1, dy)
+        const wd = dt.toLocaleDateString('en-GB', { weekday: 'short' })
+        const day = dy
+        const monthChanged = dt.getMonth() !== todayMonth
+        const monthStr = monthChanged ? dt.toLocaleDateString('en-GB', { month: 'short' }) : ''
+        const label = monthChanged
+          ? `${wd}  ${String(day).padStart(2, ' ')} ${monthStr}`
+          : `${wd} ${day}`
+        return { label, items }
+      })
+  }
+  const aheadDays = makeAheadDays()
+
+  // MicroPulse data
+  const microCards: MicroCardData[] = micros.map(ctx => {
+    const ctxTodos = activeTodos
+      .filter(t => t.contextId === ctx.id)
+      .sort((a, b) => ({ high: 0, medium: 1, low: 2 }[a.priority] - { high: 0, medium: 1, low: 2 }[b.priority]))
+    const topTodo = ctxTodos[0]?.title ?? null
+    const count = ctxTodos.length
+    const meta = count > 0 ? `${count} todo${count !== 1 ? 's' : ''}` : 'all clear'
+
+    const days7 = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(Date.now() - (6 - i) * 86400000).toISOString().split('T')[0]
+      return completedIn7d.filter(t => t.contextId === ctx.id && t.completedAt?.startsWith(d)).length
+    })
+    const maxVal = Math.max(...days7, 1)
+    const pulse = days7.map(v => v / maxVal)
+    return { id: ctx.id, name: ctx.name, color: ctx.color, topTodo, meta, pulse }
+  })
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+
+  const SECTION_LABEL: React.CSSProperties = {
+    fontSize: 11, fontWeight: 500, color: 'hsl(var(--muted-foreground))',
+    letterSpacing: 0.8, textTransform: 'uppercase', margin: 0,
+  }
+  const MONO: React.CSSProperties = {
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    fontSize: 11, color: 'hsl(var(--muted-foreground))',
+  }
+
   return (
-    <div style={{ display: 'flex', flex: 1 }}>
-      {/* Main content */}
-      <div className="page-pad" style={{ flex: 1, minWidth: 0 }}>
+    <div className="page-pad" style={{ flex: 1, paddingBottom: 40 }}>
 
-        {/* Greeting row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 36 }}>
-          <Greeting firstName={firstName} />
-          <span style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))', flexShrink: 0, paddingBottom: 3 }}>
-            {dateLabel}
-          </span>
-        </div>
+      <BriefingHero
+        firstName={firstName}
+        overdueCount={overdueTodos.length}
+        dueTodayCount={dueTodayTodos.length}
+        upcoming7dCount={upcoming7dCount}
+        topContextByLoad={topContextByLoad}
+        weekDays={weekDays}
+      />
 
-        {/* Today — overdue + due today todos */}
-        {dailyTodos.length > 0 && (
-          <section style={{ marginBottom: 40 }}>
-            <TodayFocus todos={dailyTodos} today={today} />
-          </section>
-        )}
+      {/* Mantra */}
+      {mantraText && (
+        <section style={{ marginBottom: 22 }}>
+          <MantraStrip text={mantraText} />
+        </section>
+      )}
 
-        {/* Needs attention */}
-        {macros.length > 0 && (
-          <section style={{ marginBottom: 40 }}>
-            <p style={{
-              fontSize: 11, fontWeight: 500, color: 'hsl(var(--muted-foreground))',
-              letterSpacing: 0.8, textTransform: 'uppercase', margin: '0 0 12px',
-            }}>
-              Needs attention
-            </p>
+      {/* Pinned */}
+      {pinnedAll.length > 0 && (
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <p style={SECTION_LABEL}>Pinned</p>
+          </div>
+          <PinnedStrip items={pinnedAll} />
+        </section>
+      )}
+
+      {/* Now / Ahead */}
+      {(overdueWithCtx.length > 0 || dueTodayWithCtx.length > 0 || aheadDays.length > 0) && (
+        <section className="mc-body-grid" style={{ marginBottom: 24 }}>
+          {(overdueWithCtx.length > 0 || dueTodayWithCtx.length > 0) ? (
+            <NowColumn overdue={overdueWithCtx} dueToday={dueTodayWithCtx} />
+          ) : (
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: 10,
+              background: 'hsl(var(--card))',
+              border: '0.5px solid hsl(var(--border))',
+              borderRadius: 14,
+              padding: '14px 18px',
             }}>
-              {macros.map(ctx => {
-                const urgent = getUrgent(ctx.id)
-                const ctxUpcoming = (datesByCtx.get(ctx.id) ?? []).slice(0, 2)
-                const hasItems = urgent.length > 0 || ctxUpcoming.length > 0
-
-                return (
-                  <div key={ctx.id} className="card-shadow" style={{
-                    background: 'hsl(var(--card))',
-                    border: '0.5px solid hsl(var(--border))',
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                  }}>
-                    {/* Card header */}
-                    <div style={{
-                      padding: '10px 14px',
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      borderBottom: hasItems ? '0.5px solid hsl(var(--border))' : 'none',
-                    }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: ctx.color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, fontWeight: 500 }}>{ctx.name}</span>
-                    </div>
-
-                    {/* Card body */}
-                    <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: 0 }}>
-                      {hasItems ? (
-                        <>
-                          {urgent.map(todo => (
-                            <div key={todo.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 14px' }}>
-                              <div style={{ marginTop: 2 }}>
-                                <TodoCheckbox todoId={todo.id} color={ctx.color} size={15} />
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <span style={{ fontSize: 13, lineHeight: 1.4, display: 'block' }}>
-                                  {todo.title}
-                                </span>
-                                {todo.dueDate && (
-                                  <span style={{ fontSize: 11, color: todo.dueDate <= today ? '#d95f5f' : 'hsl(var(--muted-foreground))', display: 'block', marginTop: 1 }}>
-                                    {todo.dueDate <= today ? 'Overdue' : `Due ${formatDate(todo.dueDate)}`}
-                                  </span>
-                                )}
-                              </div>
-                              {/* Priority badge */}
-                              <span style={badge(todo.priority === 'low' ? 'low' : todo.priority)}>
-                                {todo.priority === 'high' ? 'High' : todo.priority === 'medium' ? 'Med' : 'Low'}
-                              </span>
-                            </div>
-                          ))}
-                          {ctxUpcoming.map(d => (
-                            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 14px' }}>
-                              <Calendar size={12} strokeWidth={1.5} style={{ color: ctx.color, flexShrink: 0, marginTop: 1 }} />
-                              <span style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))' }}>
-                                {d.title}
-                                <span style={{ marginLeft: 5 }}>· {formatDate(d.date)}</span>
-                              </span>
-                            </div>
-                          ))}
-                        </>
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', padding: '6px 14px' }}>All clear</span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-
-              {/* Aggregated upcoming dates card */}
-              {allUpcoming.length > 0 && (
-                <div className="card-shadow" style={{
-                  background: 'hsl(var(--card))',
-                  border: '0.5px solid hsl(var(--border))',
-                  borderRadius: 12,
-                  overflow: 'hidden',
-                }}>
-                  <div style={{
-                    padding: '10px 14px',
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    borderBottom: '0.5px solid hsl(var(--border))',
-                  }}>
-                    <Calendar size={13} strokeWidth={1.5} style={{ color: 'hsl(var(--muted-foreground))' }} />
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>Upcoming</span>
-                  </div>
-                  <div style={{ padding: '8px 0' }}>
-                    {allUpcoming.slice(0, 4).map(d => {
-                      const ctx = userContexts.find(c => c.id === d.contextId)
-                      const [year, month, day] = d.date.split('-').map(Number)
-                      const dt = new Date(year, month - 1, day)
-                      const monthLabel = dt.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase()
-                      const dayNum = dt.getDate()
-                      return (
-                        <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 14px' }}>
-                          <div style={{
-                            background: ctx ? colorTint(ctx.color, 0.15) : 'hsl(var(--muted))',
-                            border: `0.5px solid ${ctx ? colorTint(ctx.color, 0.3) : 'hsl(var(--border))'}`,
-                            borderRadius: 6, padding: '2px 6px', textAlign: 'center',
-                            flexShrink: 0, minWidth: 36,
-                          }}>
-                            <div style={{ fontSize: 8, fontWeight: 500, color: ctx?.color ?? 'hsl(var(--muted-foreground))', letterSpacing: 0.5 }}>{monthLabel}</div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: ctx?.color ?? 'hsl(var(--foreground))', lineHeight: 1.1 }}>{dayNum}</div>
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <span style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title}</span>
-                            <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>
-                              {ctx ? `${ctx.name} · ` : ''}
-                              <span style={{ color: ctx?.color ?? 'hsl(var(--muted-foreground))' }}>
-                                {getCountdown(d.date, today)}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+              <h2 style={{ fontSize: 15, fontWeight: 600, margin: '0 0 8px', letterSpacing: -0.2 }}>Now</h2>
+              <p style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))', margin: 0 }}>All clear — nothing overdue or due today.</p>
             </div>
-          </section>
-        )}
+          )}
+          <WeekTimeline days={aheadDays} />
+        </section>
+      )}
 
-        {/* Pinned */}
-        {(pinnedTodos.length > 0 || pinnedDates.length > 0) && (
-          <section style={{ marginBottom: 40 }}>
-            <p style={{
-              fontSize: 11, fontWeight: 500, color: 'hsl(var(--muted-foreground))',
-              letterSpacing: 0.8, textTransform: 'uppercase', margin: '0 0 12px',
-            }}>
-              Pinned
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8 }}>
-              {pinnedTodos.map(todo => {
-                const ctx = userContexts.find(c => c.id === todo.contextId)
-                return (
-                  <div key={todo.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 14px',
-                    background: 'hsl(var(--card))',
-                    border: '0.5px solid hsl(var(--border))',
-                    borderRadius: 10,
-                  }}>
-                    <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>☐</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{todo.title}</span>
-                      <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>
-                        Todo{ctx ? ` · ${ctx.name}` : ''}
-                      </span>
-                    </div>
-                    {ctx && <span style={{ width: 7, height: 7, borderRadius: '50%', background: ctx.color, flexShrink: 0 }} />}
-                  </div>
-                )
-              })}
-              {pinnedDates.map(d => {
-                const ctx = userContexts.find(c => c.id === d.contextId)
-                return (
-                  <div key={d.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 14px',
-                    background: 'hsl(var(--card))',
-                    border: '0.5px solid hsl(var(--border))',
-                    borderRadius: 10,
-                  }}>
-                    <Calendar size={14} strokeWidth={1.5} style={{ color: ctx?.color ?? 'hsl(var(--muted-foreground))', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title}</span>
-                      <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>
-                        Date{ctx ? ` · ${ctx.name}` : ''} · {formatDate(d.date)}
-                      </span>
-                    </div>
-                    {ctx && <span style={{ width: 7, height: 7, borderRadius: '50%', background: ctx.color, flexShrink: 0 }} />}
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Empty state */}
-        {macros.length === 0 && (
-          <div style={{ marginTop: 60 }}>
-            <p style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>No contexts yet</p>
-            <p style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))', marginTop: 6, marginBottom: 0 }}>
-              Add your first context using the button above.
-            </p>
+      {/* Micro pulse */}
+      {microCards.length > 0 && (
+        <section>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <p style={SECTION_LABEL}>Micro pulse</p>
+            <span style={MONO}>{microCards.length} micro{microCards.length !== 1 ? 's' : ''} · ticking along</span>
           </div>
-        )}
-      </div>
+          <MicroPulse micros={microCards} />
+        </section>
+      )}
 
-      {/* Micro sidebar — hidden on mobile */}
-      {micros.length > 0 && (
-        <aside className="page-pad hide-on-mobile" style={{
-          width: 248,
-          flexShrink: 0,
-          borderLeft: '0.5px solid hsl(var(--border))',
-          flexDirection: 'column',
-        }}>
-          <p style={{
-            fontSize: 11, fontWeight: 500, color: 'hsl(var(--muted-foreground))',
-            letterSpacing: 0.8, textTransform: 'uppercase', margin: '0 0 12px',
-          }}>
-            Micro
+      {/* Empty state */}
+      {userContexts.length === 0 && (
+        <div style={{ marginTop: 60 }}>
+          <p style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>No contexts yet</p>
+          <p style={{ fontSize: 13, color: 'hsl(var(--muted-foreground))', marginTop: 6, marginBottom: 0 }}>
+            Add your first context using the button above.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {micros.map(ctx => {
-              const ctxTodos = todosByCtx.get(ctx.id) ?? []
-              const sortedTodos = [...ctxTodos].sort((a, b) => {
-                const order = { high: 0, medium: 1, low: 2 }
-                return order[a.priority] - order[b.priority]
-              })
-              const topItems = sortedTodos.slice(0, 2)
-
-              return (
-                <div key={ctx.id} className="card-shadow" style={{
-                  background: 'hsl(var(--card))',
-                  border: '0.5px solid hsl(var(--border))',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: topItems.length > 0 ? 7 : 0 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: ctx.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>{ctx.name}</span>
-                  </div>
-                  {topItems.length > 0 ? topItems.map(todo => (
-                    <div key={todo.id} style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 14, marginBottom: 3 }}>
-                      <TodoCheckbox todoId={todo.id} color={ctx.color} size={13} />
-                      <span style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {todo.title}
-                      </span>
-                    </div>
-                  )) : (
-                    <p style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))', margin: 0, paddingLeft: 14 }}>All clear</p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </aside>
+        </div>
       )}
     </div>
   )

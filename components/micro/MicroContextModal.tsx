@@ -2,24 +2,28 @@
 
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
-import { WidgetDashboard } from '@/components/widgets/WidgetDashboard'
-import type { WidgetType, WidgetInstance, Todo, TodoList, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
+import { MacroPriorities } from '@/components/macro/MacroPriorities'
+import { MacroAhead } from '@/components/macro/MacroAhead'
+import { MacroNotes } from '@/components/macro/MacroNotes'
+import { ReferenceStrip } from '@/components/macro/ReferenceStrip'
+import type { Todo, TodoList, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
+
+interface HabitWithStreak extends Habit { streak: number }
 
 interface DashboardData {
   contextId: string
   contextColor: string
-  orderedInstances: WidgetInstance[]
-  initialEnabled: Record<WidgetType, boolean>
-  widgetSettings: Partial<Record<WidgetType, Record<string, unknown>>>
   todos: Todo[]
   todoLists: TodoList[]
   dates: DateEvent[]
   notes: Note[]
   habits: Habit[]
-  todayLogs: HabitLog[]
+  habitLogs28d: HabitLog[]
+  completedIn28d: { completedAt: string | null }[]
   links: Link[]
   people: Person[]
   mantraText: string | null
+  sectionEnabled: Record<string, boolean>
 }
 
 interface Props {
@@ -27,6 +31,16 @@ interface Props {
   contextName: string
   contextColor: string
   onClose: () => void
+}
+
+function computeStreak(habitId: string, logs: HabitLog[]): number {
+  let s = 0
+  for (let i = 0; i < 28; i++) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().split('T')[0]
+    if (logs.some(l => l.habitId === habitId && l.date === d && l.completed)) s++
+    else break
+  }
+  return s
 }
 
 export function MicroContextModal({ contextId, contextName, contextColor, onClose }: Props) {
@@ -54,6 +68,12 @@ export function MicroContextModal({ contextId, contextName, contextColor, onClos
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  const in30days = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+
+  const habitsWithStreak: HabitWithStreak[] = data
+    ? data.habits.map(h => ({ ...h, streak: computeStreak(h.id, data.habitLogs28d ?? []) }))
+    : []
 
   return (
     <>
@@ -115,22 +135,46 @@ export function MicroContextModal({ contextId, contextName, contextColor, onClos
             </div>
           )}
           {data && (
-            <WidgetDashboard
-              contextId={data.contextId}
-              contextColor={data.contextColor}
-              orderedInstances={data.orderedInstances}
-              initialEnabled={data.initialEnabled}
-              widgetSettings={data.widgetSettings}
-              todos={data.todos}
-              todoLists={data.todoLists}
-              dates={data.dates}
-              notes={data.notes}
-              habits={data.habits}
-              todayLogs={data.todayLogs}
-              links={data.links}
-              people={data.people}
-              mantraText={data.mantraText}
-            />
+            <div className="page-pad" style={{ paddingBottom: 32 }}>
+              {(data.sectionEnabled.todos || data.sectionEnabled.dates) && (
+                <div className="macro-body-grid" style={{ marginBottom: 16 }}>
+                  {data.sectionEnabled.todos && (
+                    <MacroPriorities
+                      todos={data.todos}
+                      todoLists={data.todoLists}
+                      color={data.contextColor}
+                      contextId={data.contextId}
+                    />
+                  )}
+                  {data.sectionEnabled.dates && (
+                    <MacroAhead
+                      todos={data.todos}
+                      dates={data.dates}
+                      color={data.contextColor}
+                      contextId={data.contextId}
+                      in30days={in30days}
+                    />
+                  )}
+                </div>
+              )}
+              {data.sectionEnabled.notes && (
+                <div style={{ marginBottom: 16 }}>
+                  <MacroNotes
+                    notes={data.notes}
+                    color={data.contextColor}
+                    contextId={data.contextId}
+                  />
+                </div>
+              )}
+              <ReferenceStrip
+                habitsWithStreak={habitsWithStreak}
+                links={data.links}
+                people={data.people}
+                color={data.contextColor}
+                contextId={data.contextId}
+                sectionEnabled={data.sectionEnabled}
+              />
+            </div>
           )}
         </div>
       </div>
