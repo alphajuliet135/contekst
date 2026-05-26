@@ -1,6 +1,7 @@
 import { colorTint } from '@/lib/utils'
 import { MacroHeroActions } from './MacroHeroActions'
 import { MacroMantra } from './MacroMantra'
+import { MacroActivityHeatmap } from './MacroActivityHeatmap'
 import { CountPill } from './CountPill'
 
 const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
@@ -106,35 +107,7 @@ export function MacroHero({
         {/* Right column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 4 }}>
           {/* Activity heatmap */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 500, color: 'hsl(var(--muted-foreground))', letterSpacing: 0.8, textTransform: 'uppercase' }}>Activity</span>
-              <span style={{ fontSize: 10, color: 'hsl(var(--muted-foreground))', fontFamily: MONO }}>4w</span>
-            </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(14, 1fr)',
-              gridTemplateRows: 'repeat(2, 1fr)',
-              gap: 3,
-            }}>
-              {activity28d.map((v, i) => {
-                const isToday = i === 27
-                return (
-                  <span key={i} style={{
-                    aspectRatio: '1', borderRadius: 2.5,
-                    background: v ? color : 'hsl(var(--muted))',
-                    opacity: v ? (isToday ? 1 : 0.55) : 1,
-                    border: isToday ? `0.5px solid ${color}` : 'none',
-                    display: 'block',
-                  }} />
-                )
-              })}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, color: 'hsl(var(--muted-foreground))', fontFamily: MONO }}>
-              <span>4w ago</span>
-              <span>this week</span>
-            </div>
-          </div>
+          <MacroActivityHeatmap activity28d={activity28d} color={color} />
 
           {/* Action buttons */}
           <MacroHeroActions

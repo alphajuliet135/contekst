@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil } from 'lucide-react'
+import { Pencil, Minimize2, Maximize2 } from 'lucide-react'
 import { colorTint } from '@/lib/utils'
 
 const COLORS = [
@@ -97,15 +97,16 @@ export function MacroHeroActions({ contextId, name, color, type, description, se
           <Pencil size={11} strokeWidth={1.75} />
           Edit context
         </button>
+        <button onClick={() => { setLocalEnabled(sectionEnabled); setLayoutOpen(true) }} style={btnStyle(color)}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Edit layout
+        </button>
         <button
           onClick={() => moveTo(type === 'macro' ? 'micro' : 'macro')}
           style={btnStyle(color)}
         >
+          {type === 'macro' ? <Minimize2 size={11} strokeWidth={1.75} /> : <Maximize2 size={11} strokeWidth={1.75} />}
           {type === 'macro' ? 'Move to Micro' : 'Promote to Macro'}
-        </button>
-        <button onClick={() => { setLocalEnabled(sectionEnabled); setLayoutOpen(true) }} style={btnStyle(color)}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Edit layout
         </button>
       </div>
 

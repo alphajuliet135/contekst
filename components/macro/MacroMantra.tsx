@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { colorTint } from '@/lib/utils'
+import { Pencil } from 'lucide-react'
 
 const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
 
@@ -84,19 +84,17 @@ export function MacroMantra({ contextId, color, mantraText }: Props) {
   }
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
       onClick={startEdit}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') startEdit() }}
       style={{
-        display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0 18px',
-        cursor: 'pointer', padding: '8px 10px', borderRadius: 7,
-        border: `0.5px dashed ${colorTint(color, 0.3)}`,
-        background: colorTint(color, 0.04),
+        background: 'none', border: 'none', cursor: 'pointer',
+        padding: '4px 0', margin: '10px 0 16px',
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        color: 'hsl(var(--muted-foreground))', fontSize: 11,
       }}
     >
-      <span style={{ fontSize: 12, color: 'hsl(var(--muted-foreground))' }}>Add a mantra…</span>
-    </div>
+      <Pencil size={11} strokeWidth={1.75} />
+      Add mantra
+    </button>
   )
 }

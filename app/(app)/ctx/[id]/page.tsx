@@ -113,6 +113,7 @@ export default async function ContextPage({ params }: Props) {
   const habitsWithStreak = ctxHabits.map((h: Habit) => ({
     ...h,
     streak: computeStreak(h.id, habitLogs28d),
+    completedToday: habitLogs28d.some(l => l.habitId === h.id && l.date === today && l.completed),
   }))
 
   // 28-day activity heatmap: 0|1 per day, oldest first

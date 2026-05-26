@@ -140,11 +140,11 @@ export function MacroAhead({ todos, dates: initialDates, color, contextId, in30d
           <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>Next 30 days</span>
         </div>
         <button
+          title="Add date"
           onClick={() => setAdding(v => !v)}
           style={{ fontSize: 12, color, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, padding: 0 }}
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M12 5v14M5 12h14"/></svg>
-          Add
         </button>
       </div>
 

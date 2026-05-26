@@ -188,11 +188,11 @@ export function MacroNotes({ notes: initialNotes, color, contextId }: Props) {
           )}
         </div>
         <button
+          title="Add note"
           onClick={createNote}
           style={{ marginLeft: 'auto', fontSize: 12, color, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, padding: 0 }}
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M12 5v14M5 12h14"/></svg>
-          New note
         </button>
       </div>
 

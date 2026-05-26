@@ -8,7 +8,7 @@ import { MacroNotes } from '@/components/macro/MacroNotes'
 import { ReferenceStrip } from '@/components/macro/ReferenceStrip'
 import type { Todo, TodoList, DateEvent, Note, Habit, HabitLog, Link, Person } from '@/lib/types'
 
-interface HabitWithStreak extends Habit { streak: number }
+interface HabitWithStreak extends Habit { streak: number; completedToday: boolean }
 
 interface DashboardData {
   contextId: string
@@ -70,9 +70,14 @@ export function MicroContextModal({ contextId, contextName, contextColor, onClos
   }, [onClose])
 
   const in30days = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+  const todayStr = new Date().toISOString().split('T')[0]
 
   const habitsWithStreak: HabitWithStreak[] = data
-    ? data.habits.map(h => ({ ...h, streak: computeStreak(h.id, data.habitLogs28d ?? []) }))
+    ? data.habits.map(h => ({
+        ...h,
+        streak: computeStreak(h.id, data.habitLogs28d ?? []),
+        completedToday: (data.habitLogs28d ?? []).some(l => l.habitId === h.id && l.date === todayStr && l.completed),
+      }))
     : []
 
   return (
