@@ -103,6 +103,7 @@ export const habits = sqliteTable('habits', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   frequency: text('frequency', { enum: ['daily', 'weekly'] }).notNull().default('daily'),
+  weekday: text('weekday'),
   createdAt: text('created_at').default(sql`(current_timestamp)`),
 })
 

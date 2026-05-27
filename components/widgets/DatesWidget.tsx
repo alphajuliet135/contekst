@@ -245,7 +245,8 @@ export function DatesWidget({ dates, color, contextId }: Props) {
                       background: colorTint(color, 0.1),
                       border: `0.5px solid ${colorTint(color, 0.35)}`,
                       borderRadius: 6, padding: '4px 8px',
-                      textAlign: 'center', flexShrink: 0, minWidth: 40,
+                      textAlign: 'center', flexShrink: 0, width: 40,
+                      boxSizing: 'border-box',
                     }}>
                       <div style={{ fontSize: 9, fontWeight: 500, color, letterSpacing: 0.5 }}>{monthLabel}</div>
                       <div style={{ fontSize: 15, fontWeight: 500, color, lineHeight: 1.2 }}>{dayNum}</div>

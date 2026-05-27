@@ -1,16 +1,14 @@
 import { auth } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import { notFound } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import { db } from '@/server/db'
-import {
-  contexts, todos, todoLists, dates, notes, habits, habitLogs, links, people, widgetConfigs,
-} from '@/server/db/schema'
-import { eq, and, inArray, or, gte } from 'drizzle-orm'
-import type { WidgetType, WidgetInstance } from '@/lib/types'
-import { ContextHeader } from '@/components/layout/ContextHeader'
-import { WidgetDashboard } from '@/components/widgets/WidgetDashboard'
-
-const ALL_WIDGET_TYPES: WidgetType[] = ['todos', 'dates', 'notes', 'habits', 'links', 'people', 'mantra']
+import { contexts, todos, todoLists, dates, notes, habits, habitLogs, links, people, widgetConfigs } from '@/server/db/schema'
+import { eq, and, inArray, gte } from 'drizzle-orm'
+import type { Habit, HabitLog } from '@/lib/types'
+import { MacroHero } from '@/components/macro/MacroHero'
+import { MacroPriorities } from '@/components/macro/MacroPriorities'
+import { MacroAhead } from '@/components/macro/MacroAhead'
+import { MacroNotes } from '@/components/macro/MacroNotes'
+import { ReferenceStrip } from '@/components/macro/ReferenceStrip'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -27,9 +25,9 @@ export default async function ContextPage({ params }: Props) {
   })
   if (!context) notFound()
 
-  const today = new Date().toISOString().split('T')[0]
-  // Only show done tasks completed within the last 7 days
-  const cutoff = new Date(Date.now() - 7 * 86400000).toISOString()
+  const today     = new Date().toISOString().split('T')[0]
+  const in30days  = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+  const cutoff28d = new Date(Date.now() - 28 * 86400000).toISOString().split('T')[0]
 
   const [
     ctxTodos,
@@ -40,23 +38,17 @@ export default async function ContextPage({ params }: Props) {
     ctxLinks,
     ctxPeople,
     configs,
+    completedIn28d,
   ] = await Promise.all([
     db.query.todos.findMany({
-      where: and(
-        eq(todos.contextId, id),
-        eq(todos.userId, userId),
-        or(
-          eq(todos.done, false),
-          and(eq(todos.done, true), gte(todos.completedAt, cutoff)),
-        ),
-      ),
+      where: and(eq(todos.contextId, id), eq(todos.userId, userId), eq(todos.done, false)),
     }),
     db.query.todoLists.findMany({
       where: and(eq(todoLists.contextId, id), eq(todoLists.userId, userId)),
       orderBy: (l, { asc }) => [asc(l.order)],
     }),
     db.query.dates.findMany({
-      where: and(eq(dates.contextId, id), eq(dates.userId, userId)),
+      where: and(eq(dates.contextId, id), eq(dates.userId, userId), gte(dates.date, today)),
       orderBy: (d, { asc }) => [asc(d.date)],
     }),
     db.query.notes.findMany({
@@ -75,134 +67,135 @@ export default async function ContextPage({ params }: Props) {
     db.query.widgetConfigs.findMany({
       where: eq(widgetConfigs.contextId, id),
     }),
+    db.query.todos.findMany({
+      where: and(eq(todos.contextId, id), eq(todos.userId, userId), eq(todos.done, true), gte(todos.completedAt, cutoff28d)),
+      columns: { completedAt: true },
+    }),
   ])
 
+  // Sequential: habitLogs need habitIds first
   const habitIds = ctxHabits.map(h => h.id)
-  const todayLogs = habitIds.length > 0
+  const habitLogs28d: HabitLog[] = habitIds.length > 0
     ? await db.query.habitLogs.findMany({
-        where: and(eq(habitLogs.date, today), inArray(habitLogs.habitId, habitIds)),
+        where: and(inArray(habitLogs.habitId, habitIds), gte(habitLogs.date, cutoff28d)),
       })
     : []
 
-  // Mantra text from widget_configs.settings
+  // ── Derived stats ────────────────────────────────────────────────────────────
+
+  const overdueCt   = ctxTodos.filter(t => t.dueDate && t.dueDate < today).length
+  const highCt      = ctxTodos.filter(t => t.priority === 'high').length
+  const upcoming30d = ctxDates.filter(d => d.date <= in30days).length
+    + ctxTodos.filter(t => t.dueDate && t.dueDate >= today && t.dueDate <= in30days).length
+
+  const nearestDate = ctxDates[0] ?? null
+  const nextEventDays = nearestDate
+    ? Math.ceil((new Date(nearestDate.date + 'T12:00:00').getTime() - Date.now()) / 86400000)
+    : null
+  const nextEventStr = nextEventDays != null
+    ? nextEventDays <= 0 ? 'today' : nextEventDays === 1 ? '1d' : `${nextEventDays}d`
+    : '—'
+
+  function computeStreak(habitId: string, logs: HabitLog[]) {
+    let s = 0
+    for (let i = 0; i < 28; i++) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().split('T')[0]
+      if (logs.some(l => l.habitId === habitId && l.date === d && l.completed)) s++
+      else break
+    }
+    return s
+  }
+
+  const topStreak = ctxHabits.length > 0
+    ? Math.max(...ctxHabits.map(h => computeStreak(h.id, habitLogs28d)))
+    : 0
+
+  const habitsWithStreak = ctxHabits.map((h: Habit) => ({
+    ...h,
+    streak: computeStreak(h.id, habitLogs28d),
+    completedToday: habitLogs28d.some(l => l.habitId === h.id && l.date === today && l.completed),
+  }))
+
+  // 28-day activity heatmap: 0|1 per day, oldest first
+  const activity28d = Array.from({ length: 28 }, (_, i) => {
+    const d = new Date(Date.now() - (27 - i) * 86400000).toISOString().split('T')[0]
+    return completedIn28d.some(t => t.completedAt?.startsWith(d)) ? 1 : 0
+  })
+
+  // Mantra
   const mantraConfig = configs.find(c => c.widgetType === 'mantra')
   const mantraText = (mantraConfig?.settings as { text?: string } | null)?.text ?? null
 
-  // Split configs: todos instances vs single-instance widget types
-  const todosConfigs = configs.filter(c => c.widgetType === 'todos')
-  const otherConfigs = configs.filter(c => c.widgetType !== 'todos')
-
-  // For single-instance types: enabled state (keyed by type)
-  const otherConfigMap = new Map(otherConfigs.map(c => [c.widgetType, c]))
-  const isSingleEnabled = (type: WidgetType) => {
-    const cfg = otherConfigMap.get(type)
-    return cfg ? cfg.enabled : type !== 'mantra'
-  }
-
-  const initialEnabled = Object.fromEntries(
-    ALL_WIDGET_TYPES.map(type => [
+  // Section visibility
+  const SECTION_TYPES = ['todos', 'dates', 'notes', 'habits', 'links', 'people', 'mantra'] as const
+  const sectionEnabled = Object.fromEntries(
+    SECTION_TYPES.map(type => [
       type,
-      type === 'todos' ? todosConfigs.some(c => c.enabled) : isSingleEnabled(type),
+      configs.find(c => c.widgetType === type)?.enabled ?? (type !== 'mantra'),
     ])
-  ) as Record<WidgetType, boolean>
+  ) as Record<string, boolean>
 
-  // Todos: one instance per enabled config; fall back to a default if none exist
-  const enabledTodosInstances: WidgetInstance[] = todosConfigs
-    .filter(c => c.enabled)
-    .sort((a, b) => a.order - b.order)
-    .map(c => ({
-      id: c.id,
-      type: 'todos' as WidgetType,
-      settings: (c.settings as Record<string, unknown>) ?? null,
-      label: c.label ?? null,
-    }))
-
-  const defaultTodosInstance: WidgetInstance = { id: 'default-todos', type: 'todos', settings: null, label: null }
-  const todosInstances = enabledTodosInstances.length > 0 ? enabledTodosInstances : [defaultTodosInstance]
-
-  // Single-instance widget types: build ordered entries for enabled ones
-  type WithOrder = WidgetInstance & { _order: number }
-  const singleInstances: WithOrder[] = ALL_WIDGET_TYPES
-    .filter(t => t !== 'todos' && isSingleEnabled(t))
-    .map(type => {
-      const cfg = otherConfigMap.get(type)
-      return {
-        id: cfg?.id ?? `default-${type}`,
-        type,
-        settings: (cfg?.settings as Record<string, unknown>) ?? null,
-        label: cfg?.label ?? null,
-        _order: cfg?.order ?? 99,
-      }
-    })
-
-  const todosWithOrder: WithOrder[] = todosInstances.map((inst, i) => ({
-    ...inst,
-    _order: todosConfigs.find(c => c.id === inst.id)?.order ?? i,
-  }))
-
-  const orderedInstances: WidgetInstance[] = [...todosWithOrder, ...singleInstances]
-    .sort((a, b) => a._order - b._order)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    .map(({ _order, ...rest }) => rest)
-
-  const widgetSettings = Object.fromEntries(
-    otherConfigs.map(c => [c.widgetType, (c.settings as Record<string, unknown>) ?? {}])
-  ) as Partial<Record<WidgetType, Record<string, unknown>>>
-
-  // Header meta line
-  const activeTodos = ctxTodos.filter(t => !t.done).length
-  const metaParts = [
-    activeTodos > 0 ? `${activeTodos} todo${activeTodos === 1 ? '' : 's'}` : null,
-    ctxDates.length > 0 ? `${ctxDates.length} date${ctxDates.length === 1 ? '' : 's'}` : null,
-    ctxHabits.length > 0 ? `${ctxHabits.length} habit${ctxHabits.length === 1 ? '' : 's'}` : null,
-    ctxPeople.length > 0 ? `${ctxPeople.length} ${ctxPeople.length === 1 ? 'person' : 'people'}` : null,
-  ].filter(Boolean)
-  const meta = metaParts.join(' · ')
-
-  // Next event countdown
-  const nearestDate = ctxDates[0] ?? null
-  const daysUntil = nearestDate
-    ? Math.ceil((new Date(nearestDate.date + 'T12:00:00').getTime() - Date.now()) / 86400000)
-    : null
-  const nextEventText = daysUntil !== null
-    ? daysUntil <= 0 ? 'Event today'
-    : daysUntil === 1 ? 'Next event tomorrow'
-    : `Next event in ${daysUntil} days`
-    : null
-
-  const fullMeta = [
-    context.type === 'macro' ? 'Macro context' : 'Micro context',
-    activeTodos > 0 ? `${activeTodos} open todo${activeTodos === 1 ? '' : 's'}` : null,
-    nextEventText,
-  ].filter(Boolean).join(' · ')
+  const showPriorities = sectionEnabled.todos
+  const showAhead      = sectionEnabled.dates
+  const showNotes      = sectionEnabled.notes
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-      <ContextHeader
+      <MacroHero
         contextId={id}
         name={context.name}
         color={context.color}
         type={context.type}
         description={context.description ?? null}
-        meta={fullMeta}
-      />
-
-      <WidgetDashboard
-        contextId={id}
-        contextColor={context.color}
-        orderedInstances={orderedInstances}
-        initialEnabled={initialEnabled}
-        widgetSettings={widgetSettings}
-        todos={ctxTodos}
-        todoLists={ctxTodoLists}
-        dates={ctxDates}
-        notes={ctxNotes}
-        habits={ctxHabits}
-        todayLogs={todayLogs}
-        links={ctxLinks}
-        people={ctxPeople}
         mantraText={mantraText}
+        overdueCt={overdueCt}
+        highCt={highCt}
+        upcoming30d={upcoming30d}
+        topStreak={topStreak}
+        nextEventStr={nextEventStr}
+        activity28d={activity28d}
+        sectionEnabled={sectionEnabled}
       />
+      <div className="page-pad" style={{ flex: 1, paddingBottom: 40 }}>
+        {(showPriorities || showAhead) && (
+          <div className="macro-body-grid" style={{ marginBottom: 16 }}>
+            {showPriorities && (
+              <MacroPriorities
+                todos={ctxTodos}
+                todoLists={ctxTodoLists}
+                color={context.color}
+                contextId={id}
+              />
+            )}
+            {showAhead && (
+              <MacroAhead
+                todos={ctxTodos}
+                dates={ctxDates}
+                color={context.color}
+                contextId={id}
+                in30days={in30days}
+              />
+            )}
+          </div>
+        )}
+        {showNotes && (
+          <div style={{ marginBottom: 16 }}>
+            <MacroNotes
+              notes={ctxNotes}
+              color={context.color}
+              contextId={id}
+            />
+          </div>
+        )}
+        <ReferenceStrip
+          habitsWithStreak={habitsWithStreak}
+          links={ctxLinks}
+          people={ctxPeople}
+          color={context.color}
+          contextId={id}
+          sectionEnabled={sectionEnabled}
+        />
+      </div>
     </div>
   )
 }

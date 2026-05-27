@@ -81,6 +81,8 @@ export interface Habit {
   userId: string
   title: string
   frequency: Frequency
+  weekday: string | null
+  createdAt: string | null
 }
 
 export interface HabitLog {

@@ -147,9 +147,16 @@
 header.topbar {
   overflow-x: auto;
   scrollbar-width: none;
+  padding-inline: 40px;
 }
 header.topbar::-webkit-scrollbar {
   display: none;
+}
+
+@media (max-width: 768px) {
+  header.topbar {
+    padding-inline: 16px;
+  }
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────────────── */
@@ -261,4 +268,68 @@ header.topbar::-webkit-scrollbar {
   body { font-size: 15px; }
 
   .micro-grid { gap: 16px; }
+}
+
+/* ── Notes widget: touch-device improvements ───────────────────────── */
+/* Delete button: always fully visible on touch screens */
+@media (pointer: coarse) {
+  .notes-delete-btn {
+    opacity: 1 !important;
+    padding: 8px !important;
+  }
+}
+
+/* Notes body: cap height so widget doesn't overflow the screen */
+.notes-body {
+  max-height: 640px;
+  overflow-y: auto;
+}
+
+/* ── Macro dashboard responsive layout ────────────────────────────── */
+.macro-hero-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; align-items: start; }
+.macro-body-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px; }
+.macro-ref-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+@media (max-width: 768px) {
+  .macro-hero-grid { grid-template-columns: 1fr; }
+  .macro-body-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .macro-ref-strip { grid-template-columns: 1fr; }
+}
+
+/* ── MacroNotes: mobile two-pane → stacked layout ─────────────────── */
+@media (max-width: 640px) {
+  .macro-notes-desktop {
+    flex-direction: column !important;
+    height: auto !important;
+  }
+  /* Rail becomes a horizontal scrollable list */
+  .macro-notes-desktop > div:first-child {
+    width: 100% !important;
+    max-height: 180px;
+    border-right: none !important;
+    border-bottom: 0.5px solid hsl(var(--border));
+  }
+  /* Content pane caps height */
+  .macro-notes-desktop > div:last-child {
+    min-height: 200px;
+    max-height: 60vh;
+  }
+}
+
+/* ── Mission Control layout ────────────────────────────────────────── */
+.mc-briefing-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; align-items: end; }
+.mc-body-grid     { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; }
+.mc-micro-grid    { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mc-pinned-strip  { display: flex; gap: 8px; }
+
+@media (max-width: 768px) {
+  .mc-briefing-hero { grid-template-columns: 1fr; }
+  .mc-body-grid     { grid-template-columns: 1fr; }
+  .mc-pinned-strip  { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mc-pinned-strip > * { min-width: 240px; flex-shrink: 0; }
+}
+@media (max-width: 640px) {
+  .mc-micro-grid { grid-template-columns: 1fr; }
 }
