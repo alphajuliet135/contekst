@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar } from 'lucide-react'
+import { Calendar, List } from 'lucide-react'
 import type { Todo, TodoList } from '@/lib/types'
 import { colorTint, formatDate } from '@/lib/utils'
 import { CountPill } from './CountPill'
+import { TodoListsModal } from './TodoListsModal'
 
 const BADGE_BASE: React.CSSProperties = {
   borderRadius: 5, padding: '1px 7px', fontSize: 11, fontWeight: 500,
@@ -47,6 +48,7 @@ export function MacroPriorities({ todos: initialTodos, todoLists: initialLists, 
   const [hoveredListId, setHoveredListId] = useState<string | null>(null)
   const [addingList, setAddingList] = useState(false)
   const [newListName, setNewListName] = useState('')
+  const [showListsModal, setShowListsModal] = useState(false)
   const addInputRef = useRef<HTMLInputElement>(null)
   const addRowRef = useRef<HTMLDivElement>(null)
   const newListInputRef = useRef<HTMLInputElement>(null)
@@ -209,26 +211,43 @@ export function MacroPriorities({ todos: initialTodos, todoLists: initialLists, 
   }
 
   return (
-    <div style={{
+    <div className="card-shadow" style={{
       background: 'hsl(var(--card))',
       border: '0.5px solid hsl(var(--border))',
       borderRadius: 12,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.04)',
     }}>
       {/* Header */}
       <div style={{ padding: '14px 18px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <h2 style={{ fontSize: 14, fontWeight: 600, margin: 0, letterSpacing: -0.1 }}>Priorities</h2>
-          <CountPill count={filteredTodos.length} color={color} />
+          <CountPill count={localTodos.length} color={color} />
         </div>
-        <button
-          title="Add todo"
-          onClick={() => setAdding(v => !v)}
-          style={{ fontSize: 12, color, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button
+            title="Manage lists"
+            onClick={() => setShowListsModal(true)}
+            style={{ color: 'hsl(var(--muted-foreground))', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+          >
+            <List size={12} strokeWidth={1.75} />
+          </button>
+          <button
+            title="Add todo"
+            onClick={() => setAdding(v => !v)}
+            style={{ fontSize: 12, color, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
       </div>
+
+      {showListsModal && (
+        <TodoListsModal
+          lists={localLists}
+          contextId={contextId}
+          color={color}
+          onClose={() => { setShowListsModal(false); router.refresh() }}
+        />
+      )}
 
       {/* Tab strip */}
       <div style={{ padding: '10px 18px 0', display: 'flex', gap: 4, overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center' }}>

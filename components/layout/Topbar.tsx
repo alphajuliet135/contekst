@@ -44,7 +44,6 @@ export function Topbar({ contexts, user }: Props) {
           borderBottom: '0.5px solid hsl(var(--border))',
           display: 'flex',
           alignItems: 'center',
-          paddingInline: 16,
           gap: 2,
           position: 'sticky',
           top: 0,

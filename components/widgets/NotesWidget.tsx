@@ -194,7 +194,7 @@ export function NotesWidget({ notes, color, contextId }: Props) {
           </span>
         </div>
       ) : (
-        <div>
+        <div className="notes-body">
           {items.map((item, i) => {
             const isEditing = editingId === item.id
             const isSaving = savingId === item.id
@@ -330,9 +330,10 @@ export function NotesWidget({ notes, color, contextId }: Props) {
                   </div>
                 )}
 
-                {/* Delete button — always visible */}
+                {/* Delete button */}
                 {!isEditing && (
                   <button
+                    className="notes-delete-btn"
                     onClick={e => deleteNote(e, item.id)}
                     style={{
                       position: 'absolute', top: 10, right: 10,

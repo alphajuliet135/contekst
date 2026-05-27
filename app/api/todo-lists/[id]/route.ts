@@ -6,11 +6,17 @@ import { NextResponse } from 'next/server'
 
 export const PATCH = withAuthParams<{ id: string }>(async (userId, req, { id }) => {
   const body = await req.json()
-  const { name } = body as { name?: string }
-  if (!name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
+  const { name, order } = body as { name?: string; order?: number }
+  const updates: Partial<{ name: string; order: number }> = {}
+  if (name !== undefined) {
+    if (!name.trim()) return NextResponse.json({ error: 'name cannot be empty' }, { status: 400 })
+    updates.name = name.trim()
+  }
+  if (order !== undefined) updates.order = order
+  if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'nothing to update' }, { status: 400 })
   const [row] = await db
     .update(todoLists)
-    .set({ name: name.trim() })
+    .set(updates)
     .where(and(eq(todoLists.id, id), eq(todoLists.userId, userId)))
     .returning()
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })

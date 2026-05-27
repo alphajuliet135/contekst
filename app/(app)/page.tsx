@@ -82,10 +82,16 @@ export default async function MissionControlPage() {
     ? (macros.find(c => c.id === topCtxId)?.name ?? null)
     : null
 
-  // Mantra — first non-empty text
-  const mantraText = mantraConfigs
-    .map(c => (c.settings as { text?: string } | null)?.text)
-    .find(t => t && t.trim().length > 0) ?? null
+  // Mantra — first non-empty text + the contextId that owns it (for editing)
+  const mantraOwnerConfig = mantraConfigs.find(c => {
+    const t = (c.settings as { text?: string } | null)?.text
+    return t && t.trim().length > 0
+  })
+  const mantraText = mantraOwnerConfig
+    ? (mantraOwnerConfig.settings as { text?: string }).text ?? null
+    : null
+  // Fallback contextId for editing when no mantra is set yet
+  const mantraContextId = mantraOwnerConfig?.contextId ?? userContexts[0]?.id ?? null
 
   // WeekStrip — 7 days from today
   function makeWeekDays(): WeekDay[] {
@@ -218,10 +224,10 @@ export default async function MissionControlPage() {
         weekDays={weekDays}
       />
 
-      {/* Mantra */}
-      {mantraText && (
+      {/* Mantra — always shown when contexts exist so users can set/clear it */}
+      {mantraContextId && (
         <section style={{ marginBottom: 22 }}>
-          <MantraStrip text={mantraText} />
+          <MantraStrip text={mantraText} contextId={mantraContextId} />
         </section>
       )}
 

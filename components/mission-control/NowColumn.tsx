@@ -54,11 +54,10 @@ export function NowColumn({ overdue: initialOverdue, dueToday: initialDueToday }
   if (total === 0) return null
 
   return (
-    <div style={{
+    <div className="card-shadow" style={{
       background: 'hsl(var(--card))',
       border: '0.5px solid hsl(var(--border))',
       borderRadius: 14,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.04)',
       overflow: 'hidden',
     }}>
       {/* Header */}
@@ -82,8 +81,8 @@ export function NowColumn({ overdue: initialOverdue, dueToday: initialDueToday }
               <TodoCheckbox todoId={t.id} color={t.contextColor} size={14} />
               <span style={{ flex: 1, fontSize: 14, cursor: 'pointer' }} onClick={() => markDone(t.id)}>{t.title}</span>
               <span style={{ ...BADGE_BASE, ...BADGE[t.priority] }}>{t.priority === 'high' ? 'High' : t.priority === 'medium' ? 'Med' : 'Low'}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 96, flexShrink: 0 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.contextColor }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, flexShrink: 0, maxWidth: 96 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.contextColor, flexShrink: 0 }} />
                 <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.contextName}</span>
               </div>
             </div>
@@ -107,8 +106,8 @@ export function NowColumn({ overdue: initialOverdue, dueToday: initialDueToday }
                 <div style={{ fontSize: 14, lineHeight: 1.3 }}>{t.title}</div>
               </div>
               <span style={{ ...BADGE_BASE, ...BADGE[t.priority], marginTop: 2 }}>{t.priority === 'high' ? 'High' : t.priority === 'medium' ? 'Med' : 'Low'}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 96, flexShrink: 0, marginTop: 3 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.contextColor }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, flexShrink: 0, maxWidth: 96, marginTop: 3 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.contextColor, flexShrink: 0 }} />
                 <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.contextName}</span>
               </div>
             </div>

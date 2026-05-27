@@ -34,11 +34,15 @@ export function BriefingHero({
           <span style={{ fontSize: 11, fontFamily: MONO, color: 'hsl(var(--muted-foreground))', letterSpacing: 1, textTransform: 'uppercase' }}>
             {eyebrow}
           </span>
-          <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'hsl(var(--border))', flexShrink: 0 }} />
-          <span style={{ fontSize: 11, fontFamily: MONO, color: '#2ec27e', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#2ec27e', display: 'inline-block' }} />
-            all systems healthy
-          </span>
+          {!hasAny && (
+            <>
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'hsl(var(--border))', flexShrink: 0 }} />
+              <span style={{ fontSize: 11, fontFamily: MONO, color: '#2ec27e', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#2ec27e', display: 'inline-block' }} />
+                all systems healthy
+              </span>
+            </>
+          )}
         </div>
 
         <h1 style={{ fontSize: 32, fontWeight: 600, letterSpacing: -0.6, margin: 0, lineHeight: 1.2 }}>

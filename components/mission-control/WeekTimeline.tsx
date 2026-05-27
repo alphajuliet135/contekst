@@ -48,11 +48,10 @@ export function WeekTimeline({ days }: { days: AheadDay[] }) {
   const itemCount = totalShown + overflow
 
   return (
-    <div style={{
+    <div className="card-shadow" style={{
       background: 'hsl(var(--card))',
       border: '0.5px solid hsl(var(--border))',
       borderRadius: 14,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.04)',
       overflow: 'hidden',
     }}>
       {/* Header */}

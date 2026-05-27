@@ -143,11 +143,10 @@ export function MacroNotes({ notes: initialNotes, color, contextId }: Props) {
   )
 
   return (
-    <div style={{
+    <div className="card-shadow" style={{
       background: 'hsl(var(--card))',
       border: '0.5px solid hsl(var(--border))',
       borderRadius: 12, overflow: 'hidden',
-      boxShadow: '0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.04)',
     }}>
       {/* Header */}
       <div style={{ padding: '11px 14px', borderBottom: '0.5px solid hsl(var(--border))', display: 'flex', alignItems: 'center', gap: 8 }}>

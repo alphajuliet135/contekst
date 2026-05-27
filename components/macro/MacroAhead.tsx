@@ -81,13 +81,8 @@ export function MacroAhead({ todos, dates: initialDates, color, contextId, in30d
     const [y, mo, dy] = dateStr.split('-').map(Number)
     const dt = new Date(y, mo - 1, dy)
     const wd = dt.toLocaleDateString('en-GB', { weekday: 'short' })
-    const todayMonth = new Date(today).getMonth()
-    const monthChanged = dt.getMonth() !== todayMonth
-    if (monthChanged) {
-      const mon = dt.toLocaleDateString('en-GB', { month: 'short' })
-      return `${wd} ${String(dy).padStart(2, ' ')} ${mon}`
-    }
-    return `${wd} ${dy}`
+    const mon = dt.toLocaleDateString('en-GB', { month: 'short' })
+    return `${wd} ${String(dy).padStart(2, ' ')} ${mon}`
   }
 
   async function markDone(id: string) {
@@ -126,11 +121,10 @@ export function MacroAhead({ todos, dates: initialDates, color, contextId, in30d
   }
 
   return (
-    <div style={{
+    <div className="card-shadow" style={{
       background: 'hsl(var(--card))',
       border: '0.5px solid hsl(var(--border))',
       borderRadius: 12, overflow: 'hidden',
-      boxShadow: '0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.04)',
     }}>
       {/* Header */}
       <div style={{ padding: '14px 18px', borderBottom: '0.5px solid hsl(var(--border))', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
