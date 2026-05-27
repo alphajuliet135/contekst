@@ -4,6 +4,27 @@ All notable changes to Contekst are documented here.
 
 ---
 
+## [0.7.0](https://github.com/alphajuliet135/contekst/compare/v0.6.0...v0.7.0) (2026-05-27)
+
+
+### Features
+
+* add documentation for bugs, features, and UI improvements; include screenshots ([96811b6](https://github.com/alphajuliet135/contekst/commit/96811b6f78f0717c6e57fcdff8534ff78b7c169e))
+* **api:** enhance todo list update functionality with order support ([a4d8e1b](https://github.com/alphajuliet135/contekst/commit/a4d8e1b14c75ff7ead359402963ba2c0c1f8a405))
+* enhance habit tracking with completion status and add weekday to habits ([e9f3769](https://github.com/alphajuliet135/contekst/commit/e9f3769bc735b324ee34ec1d1a92f8c5a48a9e00))
+* **macro:** add TodoListsModal for managing todo lists ([a4d8e1b](https://github.com/alphajuliet135/contekst/commit/a4d8e1b14c75ff7ead359402963ba2c0c1f8a405))
+* **mission-control:** implement editable mantra functionality in MantraStrip ([a4d8e1b](https://github.com/alphajuliet135/contekst/commit/a4d8e1b14c75ff7ead359402963ba2c0c1f8a405))
+* Refactor MicroContextModal and add new components for mission control ([74e7e12](https://github.com/alphajuliet135/contekst/commit/74e7e1200717c4effd809271495b0dea3da2b8fc))
+* update documentation for bugs and features; enhance clarity and structure ([5f29e4f](https://github.com/alphajuliet135/contekst/commit/5f29e4ffaa25da99bb8f0f600c66f826b504e220))
+
+
+### Bug Fixes
+
+* **layout:** remove hardcoded padding from Topbar component ([a4d8e1b](https://github.com/alphajuliet135/contekst/commit/a4d8e1b14c75ff7ead359402963ba2c0c1f8a405))
+* **mission-control:** adjust layout in WeekTimeline component ([a4d8e1b](https://github.com/alphajuliet135/contekst/commit/a4d8e1b14c75ff7ead359402963ba2c0c1f8a405))
+* **mission-control:** conditionally render system health status in BriefingHero ([a4d8e1b](https://github.com/alphajuliet135/contekst/commit/a4d8e1b14c75ff7ead359402963ba2c0c1f8a405))
+* **widget:** ensure consistent styling in DatesWidget and NotesWidget components ([a4d8e1b](https://github.com/alphajuliet135/contekst/commit/a4d8e1b14c75ff7ead359402963ba2c0c1f8a405))
+
 ## [0.6.0](https://github.com/alphajuliet135/contekst/compare/v0.5.0...v0.6.0) (2026-05-25)
 
 
