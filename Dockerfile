@@ -38,11 +38,12 @@ COPY --chown=nextjs:nodejs server/db/migrations ./server/db/migrations
 # Data directory for SQLite
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
+# su-exec: drop from root to nextjs after fixing bind-mount dir permissions
+RUN apk add --no-cache su-exec
+
 # Entrypoint — runs migrations then starts the server
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
-
-USER nextjs
 
 EXPOSE 3000
 
