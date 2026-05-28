@@ -4,6 +4,14 @@ All notable changes to Contekst are documented here.
 
 ---
 
+## [0.7.1](https://github.com/alphajuliet135/contekst/compare/v0.7.0...v0.7.1) (2026-05-28)
+
+
+### Bug Fixes
+
+* bind mount permissions and restore FK constraint ([e917d6c](https://github.com/alphajuliet135/contekst/commit/e917d6ce9af059769afb692e5a01cc87b6b44f3a))
+* handle bind mount permissions and restore FK constraint ([d16612f](https://github.com/alphajuliet135/contekst/commit/d16612f177fb5d7f5cfb00bbf1f99392d3f81aa2))
+
 ## [0.7.0](https://github.com/alphajuliet135/contekst/compare/v0.6.0...v0.7.0) (2026-05-27)
 
 
