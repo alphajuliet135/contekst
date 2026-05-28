@@ -10,6 +10,9 @@ if [ -z "${AUTH_SECRET}" ]; then
   exit 1
 fi
 
-node /app/scripts/migrate.js
+# Fix data directory ownership in case the bind-mount dir is root-owned (e.g. Synology).
+# Runs as root before dropping privileges so chown is always permitted.
+chown nextjs:nodejs /app/data
+chmod 755 /app/data
 
-exec node /app/server.js
+exec su-exec nextjs sh -c "node /app/scripts/migrate.js && exec node /app/server.js"
